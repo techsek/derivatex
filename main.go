@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"regexp"
@@ -50,9 +51,11 @@ func generate(website string, passwordLength int) {
 		color.Yellow("An error occurred reading the master digest file: " + err.Error())
 		return
 	}
-	if (*masterDigest)[len((*masterDigest))-1] == 1 { // encrypted with PIN code
-		*masterDigest = (*masterDigest)[:len((*masterDigest))-1]
+	var protected uint8 = (*masterDigest)[len((*masterDigest))-1]
+	*masterDigest = (*masterDigest)[:len((*masterDigest))-1]
+	if protected == 1 { // encrypted with PIN code
 		var pinCodeSHA3 *[32]byte
+		var decryptedMasterDigest *[]byte
 		for {
 			pinCode, err := readSecret("Enter your PIN code to decrypt the master digest: ")
 			if err != nil {
@@ -66,20 +69,30 @@ func generate(website string, passwordLength int) {
 				continue
 			}
 			pinCodeSHA3 = hashAndDestroy(pinCode)
-			masterDigest, err = decryptAES(masterDigest, pinCodeSHA3)
+			var encryptedMasterDigest []byte
+			for _, b := range *masterDigest {
+				encryptedMasterDigest = append(encryptedMasterDigest, b)
+			}
+			log.Println(masterDigest)
+			decryptedMasterDigest, err = decryptAES(encryptedMasterDigest, pinCodeSHA3)
+			log.Println(masterDigest)
+			clearByteArray32(pinCodeSHA3)
 			if err != nil {
-				color.HiRed("The following error occurred when decrypting the master digest: " + err.Error())
+				color.HiRed("Decryption error: " + err.Error())
+				clearByteSlice(decryptedMasterDigest)
 				continue
 			}
-			err = dechecksumize(masterDigest)
+			err = dechecksumize(decryptedMasterDigest)
 			if err != nil {
 				color.HiRed("Master digest or PIN Code is invalid - " + err.Error())
+				clearByteSlice(decryptedMasterDigest)
 				continue
 			}
+			clearByteSlice(masterDigest)
+			masterDigest = decryptedMasterDigest
 			break
 		}
 	}
-
 	password := determinePassword(masterDigest, []byte(website), passwordLength)
 	fmt.Println(color.HiGreenString("Your password for "+string(website)+" is: ") + color.HiWhiteString(password))
 }
