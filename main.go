@@ -4,15 +4,18 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"regexp"
 	"strconv"
 
+	"github.com/atotto/clipboard"
 	"github.com/fatih/color"
+	"github.com/mdp/qrterminal"
 	ps "github.com/nbutton23/zxcvbn-go"
 )
+
+// TODO clipboard Linux, Unix (requires 'xclip' or 'xsel' command to be installed)
 
 var argonTimeNs int64
 
@@ -73,9 +76,7 @@ func generate(website string, passwordLength int) {
 			for _, b := range *masterDigest {
 				encryptedMasterDigest = append(encryptedMasterDigest, b)
 			}
-			log.Println(masterDigest)
 			decryptedMasterDigest, err = decryptAES(encryptedMasterDigest, pinCodeSHA3)
-			log.Println(masterDigest)
 			clearByteArray32(pinCodeSHA3)
 			if err != nil {
 				color.HiRed("Decryption error: " + err.Error())
@@ -95,6 +96,18 @@ func generate(website string, passwordLength int) {
 	}
 	password := determinePassword(masterDigest, []byte(website), passwordLength)
 	fmt.Println(color.HiGreenString("Your password for "+string(website)+" is: ") + color.HiWhiteString(password))
+	color.HiGreen("Here is a QR code for your mobile device...")
+	config := qrterminal.Config{
+		Level:     qrterminal.M,
+		Writer:    os.Stdout,
+		BlackChar: qrterminal.WHITE,
+		WhiteChar: qrterminal.BLACK,
+		QuietZone: 1,
+	}
+	qrterminal.GenerateWithConfig("https://github.com/mdp/qrterminal", config)
+	clipboard.WriteAll(password)
+	color.HiGreen("This password has already been copied to your clipboard!")
+
 }
 
 func create() {
@@ -172,8 +185,8 @@ func create() {
 		masterDigest := createMasterDigest(masterPasswordSHA3, birthdateSHA3, argonTimeCost)
 		clearByteArray32(masterPasswordSHA3)
 		clearByteArray32(birthdateSHA3)
-		color.HiGreen("\nMaster digest computed successfully")
-		optionPin := readInput("[OPTIONAL] To generate a password, would you like to setup a 4 digit pin code? (yes/no) [no]: ")
+		color.HiGreen("\n\nMaster digest computed successfully")
+		optionPin := readInput("\n\n[OPTIONAL] To generate a password, would you like to setup a 4 digit pin code? (yes/no) [no]: ")
 		if optionPin == "yes" {
 			for {
 				pinCode, err := readSecret("Please choose your PIN code in the format 9999: ")

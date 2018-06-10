@@ -2,13 +2,19 @@ package main
 
 import (
 	"io/ioutil"
+	"os"
+	"path/filepath"
 )
 
 // We just use sha3 as the input space is already 512 bits and is impossible to crack
 
 func readMasterDigest() (masterDigest *[]byte, err error) {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		return nil, err
+	}
 	masterDigest = new([]byte)
-	*masterDigest, err = ioutil.ReadFile("MasterPasswordDigest")
+	*masterDigest, err = ioutil.ReadFile(dir + "/MasterPasswordDigest")
 	if err != nil {
 		clearByteSlice(masterDigest)
 		return nil, err

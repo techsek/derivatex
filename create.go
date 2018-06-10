@@ -2,6 +2,8 @@ package main
 
 import (
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"time"
 
 	"golang.org/x/crypto/argon2"
@@ -16,7 +18,11 @@ func createMasterDigest(masterPasswordSHA3 *[32]byte, birthdateSHA3 *[32]byte, t
 
 func writeMasterDigest(masterDigest *[]byte) error {
 	checksumize(masterDigest)
-	return ioutil.WriteFile("MasterPasswordDigest", *masterDigest, 0644)
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(dir+"/MasterPasswordDigest", *masterDigest, 0644)
 }
 
 func showHashProgress(timeCost uint32) {

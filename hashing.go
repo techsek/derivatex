@@ -9,9 +9,9 @@ import (
 
 func getArgonTime() int64 {
 	start := time.Now()
-	argon2.IDKey([]byte{0, 0, 0, 0}, []byte{0, 0, 0, 0}, 5, argonMemoryMB*1024, argonParallelism, argonDigestSize)
+	argon2.IDKey([]byte{0, 0, 0, 0}, []byte{0, 0, 0, 0}, 10, argonMemoryMB*1024, argonParallelism, argonDigestSize)
 	elapsed := time.Since(start)
-	return elapsed.Nanoseconds() / 5
+	return elapsed.Nanoseconds() / 12
 }
 
 func hashAndDestroy(data *[]byte) (digest *[32]byte) {
