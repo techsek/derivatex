@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,28 +11,41 @@ import (
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
-func createMasterDigest(masterPasswordSHA3 *[32]byte, birthdateSHA3 *[32]byte, timeCost uint32) (masterDigest *[]byte) {
+func createMasterDigest(masterPasswordSHA3 *[32]byte, birthdateSHA3 *[32]byte) (masterDigest *[]byte) {
 	masterDigest = new([]byte)
-	*masterDigest = argon2.IDKey((*masterPasswordSHA3)[:], (*birthdateSHA3)[:], timeCost, argonMemoryMB*1024, argonParallelism, argonDigestSize)
+	*masterDigest = argon2.IDKey((*masterPasswordSHA3)[:], (*birthdateSHA3)[:], argonTimeCost, argonMemoryMB*1024, argonParallelism, argonDigestSize)
 	return masterDigest
 }
 
-func writeMasterDigest(masterDigest *[]byte) error {
-	checksumize(masterDigest)
+func getArgonTimePerRound() int64 {
+	start := time.Now()
+	argon2.IDKey([]byte{}, []byte{}, argonTestRounds, argonMemoryMB*1024, argonParallelism, argonDigestSize)
+	elapsed := time.Since(start)
+	return int64(elapsed.Nanoseconds()/int64(argonTestRounds)) / 1000000
+}
+
+func writeMasterDigest(identifiant string, protection string, masterDigest *[]byte) error {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(dir+"/MasterPasswordDigest", *masterDigest, 0644)
+	var content *[]byte = new([]byte)
+	*content = append(*content, []byte("Identifiant: "+identifiant+"\n")...)
+	*content = append(*content, []byte("Protection: "+protection+"\n")...)
+	*content = append(*content, []byte("Secret Digest: ")...)
+	*content = append(*content, []byte(base64.StdEncoding.EncodeToString(*masterDigest))...)
+	err = ioutil.WriteFile(dir+"/"+masterDigestFilename, *content, 0644)
+	clearByteSlice(content)
+	return err
 }
 
-func showHashProgress(timeCost uint32) {
-	bar := pb.StartNew(int(timeCost))
-	bar.SetRefreshRate(time.Millisecond * 50)
+func showHashProgress(argonTimePerRound int64) {
+	bar := pb.StartNew(int(argonTimeCost))
+	bar.SetRefreshRate(time.Millisecond * 150)
 	bar.ShowCounters = false
-	for i := 0; i < int(timeCost); i++ {
+	for i := 0; i < int(argonTimeCost); i++ {
 		bar.Increment()
-		time.Sleep(time.Nanosecond * time.Duration(argonTimeNs))
+		time.Sleep(time.Millisecond * time.Duration(argonTimePerRound))
 	}
 	bar.FinishPrint("About to finish...")
 }

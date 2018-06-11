@@ -11,5 +11,6 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-MasterPasswordDigest
+secret_digest.txt
 .vscode
+identifiants.csv

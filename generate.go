@@ -1,30 +1,104 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/base64"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 // We just use sha3 as the input space is already 512 bits and is impossible to crack
 
-func readMasterDigest() (masterDigest *[]byte, err error) {
+func readMasterDigest() (identifiant string, protection string, masterDigest *[]byte, err error) {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
-		return nil, err
+		return "", "", nil, err
 	}
+	var content *[]byte = new([]byte)
+	*content, err = ioutil.ReadFile(dir + "/" + masterDigestFilename)
+	if err != nil {
+		clearByteSlice(content)
+		return "", "", nil, err
+	}
+
+	var i int
+	i = bytes.Index(*content, []byte("Identifiant: "))
+	if i < 0 {
+		// err
+	}
+	*content = (*content)[i+len([]byte("Identifiant: ")):]
+	i = bytes.Index(*content, []byte("\n"))
+	if i < 0 {
+		// err
+	}
+	identifiant = string((*content)[:i])
+	*content = (*content)[i+len([]byte("\n")):]
+
+	i = bytes.Index(*content, []byte("Protection: "))
+	if i < 0 {
+		// err
+	}
+	*content = (*content)[i+len([]byte("Protection: ")):]
+	i = bytes.Index(*content, []byte("\n"))
+	if i < 0 {
+		// err
+	}
+	protection = string((*content)[:i])
+	*content = (*content)[i+len([]byte("\n")):]
+
+	i = bytes.Index(*content, []byte("Secret Digest: "))
+	if i < 0 {
+		// err
+	}
+	*content = (*content)[i+len([]byte("Secret Digest: ")):]
 	masterDigest = new([]byte)
-	*masterDigest, err = ioutil.ReadFile(dir + "/MasterPasswordDigest")
+	*masterDigest, err = base64.StdEncoding.DecodeString(string(*content))
 	if err != nil {
-		clearByteSlice(masterDigest)
-		return nil, err
+		return "", "", nil, err
 	}
-	err = dechecksumize(masterDigest)
+	return identifiant, protection, masterDigest, nil
+}
+
+func addRowToIdentifiants(website string, identifiant string, passwordLength int) (err error) {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
-		clearByteSlice(masterDigest)
-		return nil, err
+		return err
 	}
-	return masterDigest, nil
+	_, err = os.Stat(dir + "/" + identifiantsFilename)
+	if os.IsNotExist(err) {
+		err = ioutil.WriteFile(dir+"/"+identifiantsFilename, []byte("Website,Identifiant,Password Length\n"), 0644)
+		if err != nil {
+			return err
+		}
+	}
+	f, err := os.Open(dir + "/" + identifiantsFilename)
+	if err != nil {
+		return err
+	}
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		row := scanner.Text()
+		columns := strings.Split(row, ",")
+		if columns[0] == website && columns[1] == identifiant {
+			f.Close()
+			return nil
+		}
+	}
+	f.Close()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	f, err = os.OpenFile(dir+"/"+identifiantsFilename, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	_, err = f.WriteString(website + "," + identifiant + "," + strconv.FormatInt(int64(passwordLength), 10) + "\n")
+	f.Close()
+	return err
 }
 
 type asciiType uint8
