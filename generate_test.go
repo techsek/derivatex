@@ -95,7 +95,7 @@ func Test_byteAsciiType(t *testing.T) {
 		},
 		{
 			byte(125),
-			asciiSymbol,
+			asciiOther,
 		},
 		{
 			byte(150),
@@ -120,20 +120,38 @@ func Test_determinePassword(t *testing.T) {
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
+			0,
+			``,
+		},
+		{
+			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
+			[]byte("google"),
+			2,
+			`t9`,
+		},
+		{
+			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
+			[]byte("google"),
+			4,
+			`t9&1`,
+		},
+		{
+			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
+			[]byte("google"),
 			10,
-			`b#1A%!zcCW`,
+			`t9&1J&/Ky>`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("facebook"),
 			10,
-			`t^1U!c)"iL`,
+			`C?z41&r(k-`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
 			50,
-			`b#1A%!zcCW",#46RFLjn6!w$N""dUE^""*56"#$u!"M!V#X"n!`,
+			`t9&1J&/Ky>16U-u7spOrT/6.MDF"Yt1TRO*@UzizwZ4'66Gvh:`,
 		},
 	}
 	for _, c := range cases {

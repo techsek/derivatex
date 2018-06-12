@@ -36,7 +36,7 @@ func main() {
 	switch command := os.Args[1]; command {
 	case "create":
 		createCommand.Parse(os.Args[2:])
-	case "generate":
+	case "generate": // TODO make better
 		if len(os.Args) < 3 {
 			color.HiRed("Website name is missing after command generate")
 			displayUsageAndExit()
@@ -86,11 +86,7 @@ func generate(website string, passwordLength int, identifiant string) {
 				continue
 			}
 			pinCodeSHA3 = hashAndDestroy(pinCode)
-			var encryptedMasterDigest []byte
-			for _, b := range *masterDigest {
-				encryptedMasterDigest = append(encryptedMasterDigest, b) // TODO make simpler
-			}
-			decryptedMasterDigest, err = decryptAES(encryptedMasterDigest, pinCodeSHA3)
+			decryptedMasterDigest, err = decryptAES(masterDigest, pinCodeSHA3)
 			clearByteArray32(pinCodeSHA3)
 			if err != nil {
 				color.HiRed("Decryption error: " + err.Error())
@@ -110,15 +106,16 @@ func generate(website string, passwordLength int, identifiant string) {
 	}
 	addRowToIdentifiants(website, identifiant, passwordLength)
 	password := determinePassword(masterDigest, []byte(website), passwordLength)
+	// TODO read configuration
 	color.HiGreen("Password QR Code:")
-	config := qrterminal.Config{ // TODO smaller
+	config := qrterminal.Config{
 		Level:     qrterminal.M,
 		Writer:    os.Stdout,
 		BlackChar: qrterminal.WHITE,
 		WhiteChar: qrterminal.BLACK,
 		QuietZone: 1,
 	}
-	qrterminal.GenerateWithConfig("https://github.com/mdp/qrterminal", config)
+	qrterminal.GenerateWithConfig(password, config)
 	fmt.Println(color.HiGreenString("Password: ") + color.HiWhiteString(password))
 	clipboard.WriteAll(password)
 	color.HiGreen("Password copied to clipboard")

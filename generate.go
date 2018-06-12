@@ -4,7 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/base64"
+	"encoding/binary"
+	"errors"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,44 +22,47 @@ func readMasterDigest() (identifiant string, protection string, masterDigest *[]
 		return "", "", nil, err
 	}
 	var content *[]byte = new([]byte)
+	defer clearByteSlice(content)
 	*content, err = ioutil.ReadFile(dir + "/" + masterDigestFilename)
 	if err != nil {
-		clearByteSlice(content)
 		return "", "", nil, err
 	}
 
+	// Reading the file step by step instead of with bytes.Split() to avoid using more memory than necessary for security purposes
 	var i int
 	i = bytes.Index(*content, []byte("Identifiant: "))
 	if i < 0 {
-		// err
+		return "", "", nil, errors.New("'Identifiant: ' not found in secret digest file")
 	}
-	*content = (*content)[i+len([]byte("Identifiant: ")):]
+	if i > 0 {
+		return "", "", nil, errors.New("'Identifiant: ' must be the start of the secret digest file")
+	}
+	clearAndTrim(content, i+len([]byte("Identifiant: ")))
 	i = bytes.Index(*content, []byte("\n"))
 	if i < 0 {
-		// err
+		return "", "", nil, errors.New("New line not found after 'Identifiant: ' in secret digest file")
 	}
 	identifiant = string((*content)[:i])
-	*content = (*content)[i+len([]byte("\n")):]
-
+	clearAndTrim(content, i+len([]byte("\n")))
 	i = bytes.Index(*content, []byte("Protection: "))
 	if i < 0 {
-		// err
+		return "", "", nil, errors.New("'Protection: ' not found in secret digest file")
 	}
-	*content = (*content)[i+len([]byte("Protection: ")):]
+	clearAndTrim(content, i+len([]byte("Protection: ")))
 	i = bytes.Index(*content, []byte("\n"))
 	if i < 0 {
-		// err
+		return "", "", nil, errors.New("New line not found after 'Protection: ' in secret digest file")
 	}
 	protection = string((*content)[:i])
-	*content = (*content)[i+len([]byte("\n")):]
-
+	clearAndTrim(content, i+len([]byte("\n")))
 	i = bytes.Index(*content, []byte("Secret Digest: "))
 	if i < 0 {
-		// err
+		return "", "", nil, errors.New("'Secret Digest: ' not found in secret digest file")
 	}
-	*content = (*content)[i+len([]byte("Secret Digest: ")):]
+	clearAndTrim(content, i+len([]byte("Secret Digest: ")))
 	masterDigest = new([]byte)
 	*masterDigest, err = base64.StdEncoding.DecodeString(string(*content))
+	clearByteSlice(content)
 	if err != nil {
 		return "", "", nil, err
 	}
@@ -148,47 +154,53 @@ func byteAsciiType(b byte) asciiType {
 	return asciiOther
 }
 
-var asciiOrder map[int]asciiType = map[int]asciiType{
-	0: asciiLowercase,
-	1: asciiSymbol,
-	2: asciiDigit,
-	3: asciiUppercase,
-}
-
-func determineOffset(b byte, i int) (offset uint8) {
-	offset = uint8(i)
-	digest := hashSHA3_256(&[]byte{b})
-	for _, b := range digest {
-		offset += b
-	}
-	return offset
-}
-
 func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength int) string {
 	// TODO passwordLength > 4
 
-	// Determine initial password of length passwordLength
+	// Hashes masterDigest+websiteName to obtain an initial
 	input := new([]byte)
 	*input = append(*masterDigest, websiteName...)
 	digest := hashAndDestroy(input) // 32 ASCII characters
-	password := (*digest)[:]
+	var password []byte = (*digest)[:]
 
-	// Extends the password with further hashing if the length is bigger than 32 characters
+	// Pseudo Random generator initialization
+	randSource := rand.NewSource(int64(binary.BigEndian.Uint64(password)))
+
+	// Extends the password using the pseudo random generator, if needed
 	for len(password) < passwordLength {
-		deeperDigest := hashSHA3_256(&password)
-		password = append(password, (*deeperDigest)[:]...)
+		password = append(password, byte(rand.Int()%256))
 	}
+
+	// Shortens the password from the digest, if needed
 	password = password[:passwordLength]
 
+	var asciiOrder map[int]asciiType = map[int]asciiType{
+		0: asciiDigit,
+		1: asciiSymbol,
+		3: asciiLowercase,
+		4: asciiUppercase,
+	}
+	var i, j int
+	for asciiOrder[0] != asciiLowercase && asciiOrder[0] != asciiUppercase {
+		i = int(randSource.Int63()) % len(asciiOrder)
+		j = int(randSource.Int63()) % len(asciiOrder)
+		for j == i {
+			j = int(randSource.Int63()) % len(asciiOrder)
+		}
+		asciiOrder[i], asciiOrder[j] = asciiOrder[j], asciiOrder[i]
+	}
+
 	for i := range password {
-		password[i] = determineOffset(password[i], i)
+		if i == 0 {
+
+		}
 		if i < len(asciiOrder) { // ensure type of character for the first few characters
 			for byteAsciiType(password[i]) != asciiOrder[i] {
-				password[i] = (password[i] + 3) % 127 // 127 is the max of all possible ASCII characters of interest
+				password[i] = (password[i] + byte(randSource.Int63())) % 127 // 127 is the max of all possible ASCII characters of interest
 			}
 		} else {
 			for byteAsciiType(password[i]) == asciiOther {
-				password[i] = (password[i] + 3) % 127
+				password[i] = (password[i] + byte(randSource.Int63())) % 127
 			}
 		}
 	}

@@ -29,3 +29,18 @@ func clearUint32(secretPtr *uint32) {
 		secretPtr = nil
 	}
 }
+
+func clearAndTrim(secretPtr *[]byte, n int) {
+	if n < 0 {
+		n = 0
+	}
+	if L := len(*secretPtr); L < n {
+		n = L
+	}
+	for i := 0; i < n; i++ {
+		(*secretPtr)[i] = byte(0)
+		(*secretPtr)[i] = byte(1)
+		(*secretPtr)[i] = byte(0)
+	}
+	*secretPtr = (*secretPtr)[n:]
+}

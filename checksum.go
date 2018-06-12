@@ -14,6 +14,9 @@ func checksumize(data *[]byte) {
 }
 
 func dechecksumize(data *[]byte) error {
+	if data == nil {
+		return errors.New("No data to verify checksum")
+	}
 	L := len(*data)
 	if L < 4 {
 		return errors.New("Checksumed data is not long enough to contain the checksum")

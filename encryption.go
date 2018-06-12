@@ -25,17 +25,19 @@ func encryptAES(plaintext *[]byte, key *[32]byte) (ciphertext *[]byte, err error
 	return ciphertext, nil
 }
 
-func decryptAES(ciphertext []byte, key *[32]byte) (plaintext *[]byte, err error) {
+func decryptAES(ciphertext *[]byte, key *[32]byte) (plaintext *[]byte, err error) {
 	block, err := aes.NewCipher((*key)[:])
 	if err != nil {
 		return nil, err
 	}
-	if len(ciphertext) < aes.BlockSize {
+	if len(*ciphertext) < aes.BlockSize {
 		return nil, errors.New("Invalid cipher size which should be bigger than block size")
 	}
-	iv := ciphertext[:aes.BlockSize]
 	plaintext = new([]byte)
-	*plaintext = ciphertext[aes.BlockSize:]
+	*plaintext = make([]byte, len(*ciphertext)-aes.BlockSize)
+	copy(*plaintext, (*ciphertext)[aes.BlockSize:])
+	iv := make([]byte, aes.BlockSize)
+	copy(iv, (*ciphertext)[:aes.BlockSize])
 	stream := cipher.NewCFBDecrypter(block, iv)
 	stream.XORKeyStream(*plaintext, *plaintext)
 	return plaintext, nil
