@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/atotto/clipboard"
 	"github.com/fatih/color"
@@ -17,10 +18,10 @@ import (
 
 // TODO clipboard Linux, Unix (requires 'xclip' or 'xsel' command to be installed)
 
-func displayUsageAndExit() {
+func displayUsageAndExit() { // TODO update
 	fmt.Println(color.HiWhiteString("Usage:") +
 		color.HiCyanString("\n./derivatex create") + color.HiWhiteString("\nCreate the master password digest needed to generate passwords") +
-		color.HiCyanString("\n\n./derivatex generate websitename [-length=20] [-identifiant=email@domain.com]") + color.HiWhiteString("\nGenerate a password for a particular website name. Optionally set the password length and/or an identifiant different than the default one (stored in secretDigest)."))
+		color.HiCyanString("\n\n./derivatex generate websitename [-length=20] [-user=email@domain.com]") + color.HiWhiteString("\nGenerate a password for a particular website name. Optionally set the password length and/or an identifiant different than the default one (stored in secretDigest)."))
 	os.Exit(1)
 }
 
@@ -28,47 +29,113 @@ func main() {
 	createCommand := flag.NewFlagSet("create", flag.ExitOnError)
 	generateCommand := flag.NewFlagSet("generate", flag.ExitOnError)
 	passwordLengthPtr := generateCommand.Int("length", defaultPasswordLength, "Length of the derived password")
-	identifiantPtr := generateCommand.String("identifiant", "", "Email, username or phone number used with this password")
+	userPtr := generateCommand.String("user", "", "Email, username or phone number used with this password")
+	roundPtr := generateCommand.Int("round", 1, "Make higher than 1 if the password has to be renewed for the website")
+	dumpCommand := flag.NewFlagSet("dump", flag.ExitOnError)
+	dumpTablePtr := dumpCommand.String("table", "identifiants", "SQLite table name to dump to CSV file")
+	searchCommand := flag.NewFlagSet("search", flag.ExitOnError)
+	// TODO search flags
 	if len(os.Args) < 2 {
 		displayUsageAndExit()
+	}
+	err := initiateDatabaseIfNeeded()
+	if err != nil {
+		color.HiRed("Error initiating database file '" + databaseFilename + "' (" + err.Error() + ")")
+		return
 	}
 	var website string
 	switch command := os.Args[1]; command {
 	case "create":
 		createCommand.Parse(os.Args[2:])
+		if createCommand.Parsed() {
+			createInteractive()
+		}
 	case "generate": // TODO make better
 		if len(os.Args) < 3 {
 			color.HiRed("Website name is missing after command generate")
 			displayUsageAndExit()
-		} else if len(os.Args[2]) >= 8 && os.Args[2][0:7] == "-length" {
-			color.HiRed("Length flag is misplaced and should be placed after website name")
-			displayUsageAndExit()
-		} else if len(os.Args[2]) >= 13 && os.Args[2][0:12] == "-identifiant" {
-			color.HiRed("Identifiant flag is misplaced and should be placed after website name")
-			displayUsageAndExit()
 		}
+		// TODO fix ./derivatex generate -length 5 facebook
 		website = os.Args[2]
 		generateCommand.Parse(os.Args[3:])
+		if generateCommand.Parsed() {
+			generate(website, *passwordLengthPtr, *userPtr, *roundPtr)
+		}
+	case "dump":
+		dumpCommand.Parse(os.Args[2:])
+		if dumpCommand.Parsed() {
+			err := dumpTable(*dumpTablePtr)
+			if err != nil {
+				color.HiRed("The table " + *dumpTablePtr + " could not be dumped to CSV file because: " + err.Error())
+				return
+			}
+			color.HiGreen("The table " + *dumpTablePtr + " is saved in " + *dumpTablePtr + ".csv")
+		}
+	case "search":
+		if len(os.Args) < 3 {
+			color.HiRed("Search query string is missing after command search")
+			displayUsageAndExit()
+		}
+		searchCommand.Parse(os.Args[3:])
+		if searchCommand.Parsed() {
+			identifiants, err := searchIdentifiants(os.Args[2])
+			if err != nil {
+				color.HiRed("The following error occurred when searching the identifiants for '" + os.Args[2] + "': " + err.Error())
+				return
+			}
+			if len(identifiants) == 0 {
+				color.HiWhite("No identifiants found for query string '" + os.Args[2] + "'")
+				return
+			}
+			color.HiWhite("Website | User | Unix time | Round | Program version")
+			for _, identifiant := range identifiants {
+				color.White(identifiant.website + " | " + identifiant.user + " | " + strconv.FormatInt(int64(identifiant.passwordLength), 10) + " | " + strconv.FormatInt(identifiant.unixTime, 10) + " | " + strconv.FormatInt(int64(identifiant.round), 10) + " | " + strconv.FormatUint(uint64(identifiant.version), 10))
+			}
+		}
 	default:
 		color.HiRed("Command '" + command + "' not recognized.")
 		displayUsageAndExit()
 	}
-	if createCommand.Parsed() {
-		create()
-	}
-	if generateCommand.Parsed() {
-		generate(website, *passwordLengthPtr, *identifiantPtr)
-	}
 }
 
-func generate(website string, passwordLength int, identifiant string) {
-	defaultIdentifiant, protection, masterDigest, err := readMasterDigest()
+func generate(website string, passwordLength int, user string, round int) {
+	defaultUser, protection, masterDigest, err := readMasterDigest()
 	if err != nil {
 		color.Yellow("An error occurred reading the master digest file: " + err.Error())
 		return
 	}
-	if identifiant == "" { // default flag
-		identifiant = defaultIdentifiant
+	if user == "" { // default flag
+		user = defaultUser
+	}
+	identifiants, err := findIdentifiantsByWebsite(website)
+	if err != nil {
+		color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
+		return
+	}
+	if len(identifiants) > 0 {
+		identifiantExists := false
+		for _, identifiant := range identifiants {
+			if user == identifiant.user { // identifiant already exists in database
+				identifiantExists = true
+				break
+			}
+		}
+		if !identifiantExists {
+			color.HiWhite("Password(s) for the following identifiant(s) have already been generated previously:")
+			for _, identifiant := range identifiants {
+				color.HiWhite(" Website name: " + identifiant.website)
+				color.HiWhite(" User: " + identifiant.user)
+				color.HiWhite(" Password Length: " + strconv.Itoa(identifiant.passwordLength))
+				color.HiWhite(" Creation date: " + time.Unix(identifiant.unixTime, 0).Format("02/01/2006"))
+				color.HiWhite(" Round: " + strconv.Itoa(identifiant.round))
+				color.HiWhite(" Version: " + strconv.Itoa(int(identifiant.version)))
+				color.HiCyan("  -----------------------------")
+			}
+			continueGenerate := readInput("Generate a password for '" + website + "' and new user '" + user + "'? (yes/no) [no]: ")
+			if continueGenerate != "yes" {
+				return
+			}
+		}
 	}
 	if protection == "pin" {
 		var pinCodeSHA3 *[32]byte
@@ -104,8 +171,8 @@ func generate(website string, passwordLength int, identifiant string) {
 			break
 		}
 	}
-	addRowToIdentifiants(website, identifiant, passwordLength)
-	password := determinePassword(masterDigest, []byte(website), passwordLength)
+	insertIdentifiant(website, user, passwordLength, round)
+	password := determinePassword(masterDigest, []byte(website), passwordLength, round)
 	// TODO read configuration
 	color.HiGreen("Password QR Code:")
 	config := qrterminal.Config{
@@ -121,7 +188,7 @@ func generate(website string, passwordLength int, identifiant string) {
 	color.HiGreen("Password copied to clipboard")
 }
 
-func create() {
+func createInteractive() {
 	fmt.Printf(color.HiWhiteString("Detecting performance of machine for Argon2ID..."))
 	argonTimePerRound := getArgonTimePerRound()                       // depends on the machine
 	fmt.Println(color.HiGreenString("%dms/round", argonTimePerRound)) // TODO in goroutine
@@ -191,11 +258,11 @@ func create() {
 			color.HiGreen("Your birthdate is valid.")
 			break
 		}
-		var identifiant string
+		var user string
 		for {
-			identifiant = readInput("Enter your default identifiant (i.e. email@domain.com): ")
-			if identifiant == "" {
-				color.Yellow("Please enter a non-empty identifiant")
+			user = readInput("Enter your default user (i.e. email@domain.com): ")
+			if user == "" {
+				color.Yellow("Please enter a non-empty user")
 				continue
 			}
 			break
@@ -248,7 +315,7 @@ func create() {
 			}
 		}
 		// TODO Yubikey with https://github.com/tstranex/u2f
-		err := writeMasterDigest(identifiant, protection, masterDigest)
+		err := writeMasterDigest(user, protection, masterDigest)
 		clearByteSlice(masterDigest)
 		if err != nil {
 			color.HiRed("Error writing master digest to file: " + err.Error())

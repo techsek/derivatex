@@ -6,13 +6,22 @@ Password derivator using hash functions written in Golang
 
 ## TODOS
 
-- Sqlite
-- Search feature
-- Unit testing
-- Smaller QR code (preferences)
+### Urgent
+
+1. No symbol options etc. in database
+1. Unit testing
+1. Finish readme and diagrams
+
+### Later
+
+- Time shown in human readable format
+- Preferences (file and interactive)
+  - Default search Exlusive or not
+  - Smaller QR code
+  - CSV separator
+- Yubikeys / Google Authenticator
 - Generate private keys i.e. RSA
-- Yubikeys
-- Finish readme and diagrams
+- Better search
 
 ## Features
 
@@ -23,6 +32,9 @@ Password derivator using hash functions written in Golang
 - Configurable
 - Extensive unit testing for solid security
 - No web, no 3rd party, all in your hands
+- Minimal memory footprint for security purposes using pointers for all sensitive data
+- Multiple rounds of generation for change password requirement
+- Dump Database tables to CSV files
 
 ## Overview of security scheme
 

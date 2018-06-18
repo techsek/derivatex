@@ -30,7 +30,7 @@ func writeMasterDigest(identifiant string, protection string, masterDigest *[]by
 		return err
 	}
 	var content *[]byte = new([]byte)
-	*content = append(*content, []byte("Identifiant: "+identifiant+"\n")...)
+	*content = append(*content, []byte("Default user: "+identifiant+"\n")...)
 	*content = append(*content, []byte("Protection: "+protection+"\n")...)
 	*content = append(*content, []byte("Secret Digest: ")...)
 	*content = append(*content, []byte(base64.StdEncoding.EncodeToString(*masterDigest))...)

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
@@ -10,13 +9,11 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 // We just use sha3 as the input space is already 512 bits and is impossible to crack
 
-func readMasterDigest() (identifiant string, protection string, masterDigest *[]byte, err error) {
+func readMasterDigest() (defaultUser string, protection string, masterDigest *[]byte, err error) {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		return "", "", nil, err
@@ -30,19 +27,19 @@ func readMasterDigest() (identifiant string, protection string, masterDigest *[]
 
 	// Reading the file step by step instead of with bytes.Split() to avoid using more memory than necessary for security purposes
 	var i int
-	i = bytes.Index(*content, []byte("Identifiant: "))
+	i = bytes.Index(*content, []byte("Default user: "))
 	if i < 0 {
-		return "", "", nil, errors.New("'Identifiant: ' not found in secret digest file")
+		return "", "", nil, errors.New("'Default user: ' not found in secret digest file")
 	}
 	if i > 0 {
-		return "", "", nil, errors.New("'Identifiant: ' must be the start of the secret digest file")
+		return "", "", nil, errors.New("'Default user: ' must be the start of the secret digest file")
 	}
-	clearAndTrim(content, i+len([]byte("Identifiant: ")))
+	clearAndTrim(content, i+len([]byte("Default user: ")))
 	i = bytes.Index(*content, []byte("\n"))
 	if i < 0 {
-		return "", "", nil, errors.New("New line not found after 'Identifiant: ' in secret digest file")
+		return "", "", nil, errors.New("New line not found after 'Default user: ' in secret digest file")
 	}
-	identifiant = string((*content)[:i])
+	defaultUser = string((*content)[:i])
 	clearAndTrim(content, i+len([]byte("\n")))
 	i = bytes.Index(*content, []byte("Protection: "))
 	if i < 0 {
@@ -66,45 +63,7 @@ func readMasterDigest() (identifiant string, protection string, masterDigest *[]
 	if err != nil {
 		return "", "", nil, err
 	}
-	return identifiant, protection, masterDigest, nil
-}
-
-func addRowToIdentifiants(website string, identifiant string, passwordLength int) (err error) {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		return err
-	}
-	_, err = os.Stat(dir + "/" + identifiantsFilename)
-	if os.IsNotExist(err) {
-		err = ioutil.WriteFile(dir+"/"+identifiantsFilename, []byte("Website,Identifiant,Password Length\n"), 0644)
-		if err != nil {
-			return err
-		}
-	}
-	f, err := os.Open(dir + "/" + identifiantsFilename)
-	if err != nil {
-		return err
-	}
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		row := scanner.Text()
-		columns := strings.Split(row, ",")
-		if columns[0] == website && columns[1] == identifiant {
-			f.Close()
-			return nil
-		}
-	}
-	f.Close()
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-	f, err = os.OpenFile(dir+"/"+identifiantsFilename, os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	_, err = f.WriteString(website + "," + identifiant + "," + strconv.FormatInt(int64(passwordLength), 10) + "\n")
-	f.Close()
-	return err
+	return defaultUser, protection, masterDigest, nil
 }
 
 type asciiType uint8
@@ -154,13 +113,19 @@ func byteAsciiType(b byte) asciiType {
 	return asciiOther
 }
 
-func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength int) string {
-	// TODO passwordLength > 4
+func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength int, round int) string {
+	// TODO passwordLength < 4 give warning
 
 	// Hashes masterDigest+websiteName to obtain an initial
 	input := new([]byte)
 	*input = append(*masterDigest, websiteName...)
 	digest := hashAndDestroy(input) // 32 ASCII characters
+	// Rounds of password (to renew password, in example)
+	var digestSlicePtr *[]byte = new([]byte)
+	for i := 1; i < round; i++ {
+		*digestSlicePtr = (*digest)[:]
+		digest = hashSHA3_256(digestSlicePtr) // additional SHA3 for more rounds
+	}
 	var password []byte = (*digest)[:]
 
 	// Pseudo Random generator initialization
