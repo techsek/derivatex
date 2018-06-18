@@ -113,7 +113,7 @@ func byteAsciiType(b byte) asciiType {
 	return asciiOther
 }
 
-func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength int, round int) string {
+func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength uint8, round uint16) string {
 	// TODO passwordLength < 4 give warning
 
 	// Hashes masterDigest+websiteName to obtain an initial
@@ -122,7 +122,8 @@ func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength 
 	digest := hashAndDestroy(input) // 32 ASCII characters
 	// Rounds of password (to renew password, in example)
 	var digestSlicePtr *[]byte = new([]byte)
-	for i := 1; i < round; i++ {
+	var k uint16
+	for k = 1; k < round; k++ {
 		*digestSlicePtr = (*digest)[:]
 		digest = hashSHA3_256(digestSlicePtr) // additional SHA3 for more rounds
 	}
@@ -132,7 +133,7 @@ func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength 
 	randSource := rand.NewSource(int64(binary.BigEndian.Uint64(password)))
 
 	// Extends the password using the pseudo random generator, if needed
-	for len(password) < passwordLength {
+	for uint8(len(password)) < passwordLength {
 		password = append(password, byte(rand.Int()%256))
 	}
 

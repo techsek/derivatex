@@ -114,48 +114,55 @@ func Test_determinePassword(t *testing.T) {
 	cases := []struct {
 		masterDigest   []byte
 		websiteName    []byte
-		passwordLength int
+		passwordLength uint8
+		round          uint16
 		password       string
 	}{
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
 			0,
+			1,
 			``,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
 			2,
+			1,
 			`t9`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
 			4,
+			1,
 			`t9&1`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
 			10,
+			1,
 			`t9&1J&/Ky>`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("facebook"),
 			10,
+			1,
 			`C?z41&r(k-`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
 			50,
+			1,
 			`t9&1J&/Ky>16U-u7spOrT/6.MDF"Yt1TRO*@UzizwZ4'66Gvh:`,
 		},
 	}
 	for _, c := range cases {
-		out := determinePassword(&c.masterDigest, c.websiteName, c.passwordLength)
+		out := determinePassword(&c.masterDigest, c.websiteName, c.passwordLength, c.round)
 		if out != c.password {
 			t.Errorf("byteAsciiType(%v, %s, %d) == %s want %s", c.masterDigest, string(c.websiteName), c.passwordLength, out, c.password)
 		}

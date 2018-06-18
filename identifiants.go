@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -36,15 +37,25 @@ func initiateDatabaseIfNeeded() (err error) {
 type identifiantType struct {
 	website        string
 	user           string
-	passwordLength int
+	passwordLength uint8 // max 255 otherwise it's ridiculous
+	round          uint16
 	unixTime       int64
-	round          int
 	version        uint16
 }
 
-func (identifiant *identifiantType) toString() string {
-	return identifiant.website + "," + identifiant.user + "," + strconv.FormatInt(int64(identifiant.passwordLength), 10) + "," +
-		strconv.FormatInt(identifiant.unixTime, 10) + "," + strconv.FormatInt(int64(identifiant.round), 10) + "," + strconv.FormatUint(uint64(identifiant.version), 10)
+func identifiantTypeLegendStrings() []string {
+	return []string{"Website", "User", "Password Length", "Round", "Date", "Program version"}
+}
+
+func (identifiant *identifiantType) toStrings() []string {
+	return []string{
+		identifiant.website,
+		identifiant.user,
+		strconv.FormatUint(uint64(identifiant.passwordLength), 10),
+		strconv.FormatUint(uint64(identifiant.round), 10),
+		time.Unix(identifiant.unixTime, 0).Format("02/01/2006"),
+		strconv.FormatUint(uint64(identifiant.version), 10),
+	}
 }
 
 func findIdentifiantsByWebsite(website string) (identifiants []identifiantType, err error) {
@@ -99,7 +110,7 @@ func findIdentifiant(website string, user string) (identifiant identifiantType, 
 	return identifiant, nil
 }
 
-func insertIdentifiant(website string, user string, passwordLength int, round int) (err error) {
+func insertIdentifiant(website string, user string, passwordLength uint8, round uint16) (err error) {
 	statement, err := database.Prepare("INSERT INTO identifiants (website, user, password_length, unix_time, round, version) VALUES (?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return err
@@ -145,7 +156,7 @@ func dumpTable(tableName string) error {
 		return err
 	}
 	var identifiant identifiantType
-	output := "Website,User,Password Length,Unix Time,Round,Program version\n"
+	output := strings.Join(identifiantTypeLegendStrings(), ",") + "\n"
 	for rows.Next() {
 		err = rows.Scan(
 			&identifiant.website,
@@ -158,7 +169,7 @@ func dumpTable(tableName string) error {
 		if err != nil {
 			return err
 		}
-		output += identifiant.toString() + "\n"
+		output += strings.Join(identifiant.toStrings(), ",") + "\n"
 	}
 	err = ioutil.WriteFile(dir+"/"+tableName+".csv", []byte(output), 0644)
 	return err

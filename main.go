@@ -8,7 +8,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
-	"time"
+	"strings"
 
 	"github.com/atotto/clipboard"
 	"github.com/fatih/color"
@@ -59,7 +59,7 @@ func main() {
 		website = os.Args[2]
 		generateCommand.Parse(os.Args[3:])
 		if generateCommand.Parsed() {
-			generate(website, *passwordLengthPtr, *userPtr, *roundPtr)
+			generate(website, uint8(*passwordLengthPtr), *userPtr, uint16(*roundPtr))
 		}
 	case "dump":
 		dumpCommand.Parse(os.Args[2:])
@@ -98,7 +98,7 @@ func main() {
 	}
 }
 
-func generate(website string, passwordLength int, user string, round int) {
+func generate(website string, passwordLength uint8, user string, round uint16) {
 	defaultUser, protection, masterDigest, err := readMasterDigest()
 	if err != nil {
 		color.Yellow("An error occurred reading the master digest file: " + err.Error())
@@ -122,14 +122,9 @@ func generate(website string, passwordLength int, user string, round int) {
 		}
 		if !identifiantExists {
 			color.HiWhite("Password(s) for the following identifiant(s) have already been generated previously:")
+			color.White(strings.Join(identifiantTypeLegendStrings(), " | "))
 			for _, identifiant := range identifiants {
-				color.HiWhite(" Website name: " + identifiant.website)
-				color.HiWhite(" User: " + identifiant.user)
-				color.HiWhite(" Password Length: " + strconv.Itoa(identifiant.passwordLength))
-				color.HiWhite(" Creation date: " + time.Unix(identifiant.unixTime, 0).Format("02/01/2006"))
-				color.HiWhite(" Round: " + strconv.Itoa(identifiant.round))
-				color.HiWhite(" Version: " + strconv.Itoa(int(identifiant.version)))
-				color.HiCyan("  -----------------------------")
+				color.White(strings.Join(identifiant.toStrings(), " | "))
 			}
 			continueGenerate := readInput("Generate a password for '" + website + "' and new user '" + user + "'? (yes/no) [no]: ")
 			if continueGenerate != "yes" {
