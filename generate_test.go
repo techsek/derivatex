@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math/rand"
+	"reflect"
 	"testing"
 )
 
@@ -110,19 +112,71 @@ func Test_byteAsciiType(t *testing.T) {
 	}
 }
 
+func Test_shuffleAsciiOrder(t *testing.T) {
+	cases := []struct {
+		asciiOrder         []asciiType
+		randSource         rand.Source
+		shuffledAsciiOrder []asciiType
+	}{
+		{
+			[]asciiType{asciiLowercase},
+			rand.NewSource(1),
+			[]asciiType{asciiLowercase},
+		},
+		{
+			[]asciiType{asciiLowercase, asciiUppercase},
+			rand.NewSource(0),
+			[]asciiType{asciiLowercase, asciiUppercase},
+		},
+		{
+			[]asciiType{asciiLowercase, asciiUppercase},
+			rand.NewSource(1),
+			[]asciiType{asciiUppercase, asciiLowercase},
+		},
+		{
+			[]asciiType{asciiLowercase, asciiUppercase, asciiDigit},
+			rand.NewSource(10),
+			[]asciiType{asciiUppercase, asciiDigit, asciiLowercase},
+		},
+		{
+			[]asciiType{asciiLowercase, asciiUppercase, asciiSymbol},
+			rand.NewSource(2645),
+			[]asciiType{asciiSymbol, asciiLowercase, asciiUppercase},
+		},
+		{
+			[]asciiType{asciiLowercase, asciiUppercase, asciiDigit, asciiSymbol},
+			rand.NewSource(0),
+			[]asciiType{asciiDigit, asciiSymbol, asciiLowercase, asciiUppercase},
+		},
+		{
+			[]asciiType{asciiLowercase, asciiUppercase, asciiDigit, asciiSymbol},
+			rand.NewSource(1),
+			[]asciiType{asciiLowercase, asciiSymbol, asciiUppercase, asciiDigit},
+		},
+	}
+	for _, c := range cases {
+		shuffleAsciiOrder(&c.asciiOrder, c.randSource)
+		if !reflect.DeepEqual(c.asciiOrder, c.shuffledAsciiOrder) {
+			t.Errorf("shuffleAsciiOrder(&c.asciiOrder, c.randSource) == %v want %v", c.asciiOrder, c.shuffledAsciiOrder)
+		}
+	}
+}
+
 func Test_determinePassword(t *testing.T) {
 	cases := []struct {
-		masterDigest   []byte
-		websiteName    []byte
-		passwordLength uint8
-		round          uint16
-		password       string
+		masterDigest        []byte
+		websiteName         []byte
+		passwordLength      uint8
+		round               uint16
+		unallowedCharacters string
+		password            string
 	}{
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
 			0,
 			1,
+			"",
 			``,
 		},
 		{
@@ -130,39 +184,60 @@ func Test_determinePassword(t *testing.T) {
 			[]byte("google"),
 			2,
 			1,
-			`t9`,
+			"",
+			`Fq`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
 			4,
 			1,
-			`t9&1`,
+			"",
+			`jA9;`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
 			10,
 			1,
-			`t9&1J&/Ky>`,
+			"",
+			`U1b5&O/Zyu`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("facebook"),
 			10,
 			1,
-			`C?z41&r(k-`,
+			"",
+			`Otf_Im15A_`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
 			50,
 			1,
-			`t9&1J&/Ky>16U-u7spOrT/6.MDF"Yt1TRO*@UzizwZ4'66Gvh:`,
+			"",
+			`I7AlJ)/Py10&rX>+V:O59C^l9n*yYm"3R",j0s,u1F7c6c7MFg`,
+		},
+		{
+			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
+			[]byte("google"),
+			10,
+			1,
+			"lowercase;uppercase",
+			`<636/*/-75`,
+		},
+		{
+			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
+			[]byte("google"),
+			10,
+			1,
+			"symbol;",
+			`j3nlfCL08L`,
 		},
 	}
 	for _, c := range cases {
-		out := determinePassword(&c.masterDigest, c.websiteName, c.passwordLength, c.round)
+		out := determinePassword(&c.masterDigest, c.websiteName, c.passwordLength, c.round, c.unallowedCharacters)
 		if out != c.password {
 			t.Errorf("byteAsciiType(%v, %s, %d) == %s want %s", c.masterDigest, string(c.websiteName), c.passwordLength, out, c.password)
 		}

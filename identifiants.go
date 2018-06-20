@@ -23,7 +23,7 @@ func initiateDatabaseIfNeeded() (err error) {
 	}
 	var statement *sql.Stmt
 	statement, err = database.Prepare(
-		"CREATE TABLE IF NOT EXISTS identifiants (website TEXT, user TEXT, password_length INTEGER, unix_time INTEGER, round INTEGER, version INTEGER, PRIMARY KEY(website, user))")
+		"CREATE TABLE IF NOT EXISTS identifiants (website TEXT, user TEXT, password_length INTEGER, unix_time INTEGER, round INTEGER, version INTEGER, unallowed_characters TEXT, PRIMARY KEY(website, user))")
 	if err != nil {
 		return err
 	}
@@ -35,16 +35,17 @@ func initiateDatabaseIfNeeded() (err error) {
 }
 
 type identifiantType struct {
-	website        string
-	user           string
-	passwordLength uint8 // max 255 otherwise it's ridiculous
-	round          uint16
-	unixTime       int64
-	version        uint16
+	website             string
+	user                string
+	passwordLength      uint8 // max 255 otherwise it's ridiculous
+	round               uint16
+	unixTime            int64
+	version             uint16
+	unallowedCharacters string
 }
 
 func identifiantTypeLegendStrings() []string {
-	return []string{"Website", "User", "Password Length", "Round", "Date", "Program version"}
+	return []string{"Website", "User", "Password Length", "Round", "Date", "Program version", "Unallowed characters"}
 }
 
 func (identifiant *identifiantType) toStrings() []string {
@@ -55,11 +56,12 @@ func (identifiant *identifiantType) toStrings() []string {
 		strconv.FormatUint(uint64(identifiant.round), 10),
 		time.Unix(identifiant.unixTime, 0).Format("02/01/2006"),
 		strconv.FormatUint(uint64(identifiant.version), 10),
+		identifiant.unallowedCharacters,
 	}
 }
 
 func findIdentifiantsByWebsite(website string) (identifiants []identifiantType, err error) {
-	statement, err := database.Prepare("SELECT website, user, password_length, unix_time, round, version FROM identifiants WHERE website = ?")
+	statement, err := database.Prepare("SELECT * FROM identifiants WHERE website = ?")
 	if err != nil {
 		return nil, err
 	}
@@ -76,6 +78,7 @@ func findIdentifiantsByWebsite(website string) (identifiants []identifiantType, 
 			&identifiant.unixTime,
 			&identifiant.round,
 			&identifiant.version,
+			&identifiant.unallowedCharacters,
 		)
 		if err != nil {
 			return nil, err
@@ -86,7 +89,7 @@ func findIdentifiantsByWebsite(website string) (identifiants []identifiantType, 
 }
 
 func findIdentifiant(website string, user string) (identifiant identifiantType, err error) {
-	statement, err := database.Prepare("SELECT website, user, password_length, unix_time, round, version FROM identifiants WHERE website = ? AND user = ?")
+	statement, err := database.Prepare("SELECT * FROM identifiants WHERE website = ? AND user = ?")
 	if err != nil {
 		return identifiant, err
 	}
@@ -102,6 +105,7 @@ func findIdentifiant(website string, user string) (identifiant identifiantType, 
 			&identifiant.unixTime,
 			&identifiant.round,
 			&identifiant.version,
+			&identifiant.unallowedCharacters,
 		)
 		if err != nil {
 			return identifiant, err
@@ -110,17 +114,17 @@ func findIdentifiant(website string, user string) (identifiant identifiantType, 
 	return identifiant, nil
 }
 
-func insertIdentifiant(website string, user string, passwordLength uint8, round uint16) (err error) {
-	statement, err := database.Prepare("INSERT INTO identifiants (website, user, password_length, unix_time, round, version) VALUES (?, ?, ?, ?, ?, ?)")
+func insertIdentifiant(website, user string, passwordLength uint8, round uint16, unallowedCharacters string) (err error) {
+	statement, err := database.Prepare("INSERT INTO identifiants (website, user, password_length, unix_time, round, version, unallowed_characters) VALUES (?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return err
 	}
-	_, err = statement.Exec(website, user, passwordLength, time.Now().Unix(), round, version)
+	_, err = statement.Exec(website, user, passwordLength, time.Now().Unix(), round, version, unallowedCharacters)
 	return err
 }
 
 func searchIdentifiants(searchString string) (identifiants []identifiantType, err error) {
-	statement, err := database.Prepare("SELECT website, user, password_length, unix_time, round, version FROM identifiants WHERE website LIKE ? OR user LIKE ?")
+	statement, err := database.Prepare("SELECT * FROM identifiants WHERE website LIKE ? OR user LIKE ?")
 	if err != nil {
 		return nil, err
 	}
@@ -137,6 +141,7 @@ func searchIdentifiants(searchString string) (identifiants []identifiantType, er
 			&identifiant.unixTime,
 			&identifiant.round,
 			&identifiant.version,
+			&identifiant.unallowedCharacters,
 		)
 		if err != nil {
 			return nil, err
@@ -165,6 +170,7 @@ func dumpTable(tableName string) error {
 			&identifiant.unixTime,
 			&identifiant.round,
 			&identifiant.version,
+			&identifiant.unallowedCharacters,
 		)
 		if err != nil {
 			return err

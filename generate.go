@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // We just use sha3 as the input space is already 512 bits and is impossible to crack
@@ -69,9 +70,9 @@ func readMasterDigest() (defaultUser string, protection string, masterDigest *[]
 type asciiType uint8
 
 const (
-	asciiDigit     asciiType = 0
-	asciiLowercase asciiType = 1
-	asciiUppercase asciiType = 2
+	asciiLowercase asciiType = 0
+	asciiUppercase asciiType = 1
+	asciiDigit     asciiType = 2
 	asciiSymbol    asciiType = 3
 	asciiOther     asciiType = 4
 )
@@ -113,9 +114,7 @@ func byteAsciiType(b byte) asciiType {
 	return asciiOther
 }
 
-func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength uint8, round uint16) string {
-	// TODO passwordLength < 4 give warning
-
+func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength uint8, round uint16, unallowedCharacters string) string {
 	// Hashes masterDigest+websiteName to obtain an initial
 	input := new([]byte)
 	*input = append(*masterDigest, websiteName...)
@@ -140,37 +139,63 @@ func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength 
 	// Shortens the password from the digest, if needed
 	password = password[:passwordLength]
 
-	var asciiOrder map[int]asciiType = map[int]asciiType{
-		0: asciiDigit,
-		1: asciiSymbol,
-		3: asciiLowercase,
-		4: asciiUppercase,
+	// Create and shuffle an initial order of Ascii character types
+	var asciiOrder []asciiType
+	var lowercaseAllowed, uppercaseAllowed, digitAllowed, symbolAllowed bool
+	lowercaseAllowed = strings.Index(unallowedCharacters, "lowercase") == -1
+	uppercaseAllowed = strings.Index(unallowedCharacters, "uppercase") == -1
+	digitAllowed = strings.Index(unallowedCharacters, "digit") == -1
+	symbolAllowed = strings.Index(unallowedCharacters, "symbol") == -1
+	if lowercaseAllowed {
+		asciiOrder = append(asciiOrder, asciiLowercase)
 	}
-	var i, j int
-	for asciiOrder[0] != asciiLowercase && asciiOrder[0] != asciiUppercase {
-		i = int(randSource.Int63()) % len(asciiOrder)
-		j = int(randSource.Int63()) % len(asciiOrder)
-		for j == i {
-			j = int(randSource.Int63()) % len(asciiOrder)
+	if uppercaseAllowed {
+		asciiOrder = append(asciiOrder, asciiUppercase)
+	}
+	if digitAllowed {
+		asciiOrder = append(asciiOrder, asciiDigit)
+	}
+	if symbolAllowed {
+		asciiOrder = append(asciiOrder, asciiSymbol)
+	}
+	if len(asciiOrder) == 0 { // all characters are unallowed
+		return ""
+	}
+	for len(asciiOrder) < int(passwordLength) {
+		asciiOrder = append(asciiOrder, asciiOrder...)
+	}
+	asciiOrder = asciiOrder[:passwordLength]
+	shuffleAsciiOrder(&asciiOrder, randSource)
+	if len(asciiOrder) > 1 {
+		// Shuffle more to get a lowercase or uppercase as the first character (if possible with flags)
+		if lowercaseAllowed && uppercaseAllowed {
+			for asciiOrder[0] != asciiLowercase && asciiOrder[0] != asciiUppercase {
+				shuffleAsciiOrder(&asciiOrder, randSource)
+			}
+		} else if lowercaseAllowed {
+			for asciiOrder[0] != asciiLowercase {
+				shuffleAsciiOrder(&asciiOrder, randSource)
+			}
+		} else if uppercaseAllowed {
+			for asciiOrder[0] != asciiUppercase {
+				shuffleAsciiOrder(&asciiOrder, randSource)
+			}
 		}
-		asciiOrder[i], asciiOrder[j] = asciiOrder[j], asciiOrder[i]
 	}
-
 	for i := range password {
-		if i == 0 {
-
-		}
-		if i < len(asciiOrder) { // ensure type of character for the first few characters
-			for byteAsciiType(password[i]) != asciiOrder[i] {
-				password[i] = (password[i] + byte(randSource.Int63())) % 127 // 127 is the max of all possible ASCII characters of interest
-			}
-		} else {
-			for byteAsciiType(password[i]) == asciiOther {
-				password[i] = (password[i] + byte(randSource.Int63())) % 127
-			}
+		for byteAsciiType(password[i]) != asciiOrder[i] {
+			password[i] = (password[i] + byte(randSource.Int63())) % 127 // 127 is the max of all possible ASCII characters of interest
 		}
 	}
 	return string(password)
+}
+
+func shuffleAsciiOrder(asciiOrder *[]asciiType, randSource rand.Source) {
+	var i, j int
+	for i = len(*asciiOrder) - 1; i > 0; i-- {
+		j = int(randSource.Int63()) % (i + 1)
+		(*asciiOrder)[i], (*asciiOrder)[j] = (*asciiOrder)[j], (*asciiOrder)[i]
+	}
 }
 
 // TODO generate RSA keys etc.

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/binary"
 	"flag"
 	"fmt"
@@ -9,11 +10,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/atotto/clipboard"
 	"github.com/fatih/color"
 	"github.com/mdp/qrterminal"
 	ps "github.com/nbutton23/zxcvbn-go"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // TODO clipboard Linux, Unix (requires 'xclip' or 'xsel' command to be installed)
@@ -31,6 +34,10 @@ func main() {
 	passwordLengthPtr := generateCommand.Int("length", defaultPasswordLength, "Length of the derived password")
 	userPtr := generateCommand.String("user", "", "Email, username or phone number used with this password")
 	roundPtr := generateCommand.Int("round", 1, "Make higher than 1 if the password has to be renewed for the website")
+	noSymbolPtr := generateCommand.Bool("nosymbol", false, "Force the password to contain no symbol")
+	noDigitPtr := generateCommand.Bool("nodigit", false, "Force the password to contain no digit")
+	noUppercasePtr := generateCommand.Bool("nouppercase", false, "Force the password to contain no uppercase letter")
+	noLowercasePtr := generateCommand.Bool("nolowercase", false, "Force the password to contain no lowercase letter")
 	dumpCommand := flag.NewFlagSet("dump", flag.ExitOnError)
 	dumpTablePtr := dumpCommand.String("table", "identifiants", "SQLite table name to dump to CSV file")
 	searchCommand := flag.NewFlagSet("search", flag.ExitOnError)
@@ -59,7 +66,8 @@ func main() {
 		website = os.Args[2]
 		generateCommand.Parse(os.Args[3:])
 		if generateCommand.Parsed() {
-			generate(website, uint8(*passwordLengthPtr), *userPtr, uint16(*roundPtr))
+			unallowedCharactersString := buildUnallowedCharactersString(*noSymbolPtr, *noDigitPtr, *noUppercasePtr, *noLowercasePtr)
+			generate(website, *userPtr, uint8(*passwordLengthPtr), uint16(*roundPtr), unallowedCharactersString)
 		}
 	case "dump":
 		dumpCommand.Parse(os.Args[2:])
@@ -98,19 +106,59 @@ func main() {
 	}
 }
 
-func generate(website string, passwordLength uint8, user string, round uint16) {
+func readInput(prompt string) (input string) {
+	fmt.Print(color.HiMagentaString(prompt))
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		input = scanner.Text()
+	}
+	return input
+}
+
+func readSecret(prompt string) (secretPtr *[]byte, err error) {
+	fmt.Print(color.HiMagentaString(prompt))
+	secretPtr = new([]byte)
+	*secretPtr, err = terminal.ReadPassword(int(syscall.Stdin))
+	fmt.Print("\n")
+	if err != nil {
+		return nil, err
+	}
+	return secretPtr, nil
+}
+
+func buildUnallowedCharactersString(noSymbol, noDigit, noUppercase, noLowercase bool) (unallowedCharacters string) {
+	if noSymbol {
+		unallowedCharacters += "symbol;"
+	}
+	if noDigit {
+		unallowedCharacters += "digit;"
+	}
+	if noUppercase {
+		unallowedCharacters += "uppercase;"
+	}
+	if noLowercase {
+		unallowedCharacters += "lowercase;"
+	}
+	return strings.TrimSuffix(unallowedCharacters, ";")
+}
+
+func generate(website, user string, passwordLength uint8, round uint16, unallowedCharacters string) {
+	if len(strings.Split(unallowedCharacters, ";")) == 4 {
+		color.HiRed("The password can't be generated with no symbol or digit or lowercase or uppercase")
+		return
+	}
 	defaultUser, protection, masterDigest, err := readMasterDigest()
 	if err != nil {
 		color.Yellow("An error occurred reading the master digest file: " + err.Error())
 		return
 	}
-	if user == "" { // default flag
-		user = defaultUser
-	}
 	identifiants, err := findIdentifiantsByWebsite(website)
 	if err != nil {
 		color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
 		return
+	}
+	if user == "" { // default flag
+		user = defaultUser
 	}
 	if len(identifiants) > 0 {
 		identifiantExists := false
@@ -166,9 +214,9 @@ func generate(website string, passwordLength uint8, user string, round uint16) {
 			break
 		}
 	}
-	insertIdentifiant(website, user, passwordLength, round)
-	password := determinePassword(masterDigest, []byte(website), passwordLength, round)
-	// TODO read configuration
+
+	password := determinePassword(masterDigest, []byte(website), passwordLength, round, unallowedCharacters)
+	insertIdentifiant(website, user, passwordLength, round, unallowedCharacters)
 	color.HiGreen("Password QR Code:")
 	config := qrterminal.Config{
 		Level:     qrterminal.M,

@@ -8,9 +8,9 @@ Password derivator using hash functions written in Golang
 
 ### Urgent
 
-1. No symbol options etc. in database
-1. Unit testing
+1. Unit testing to finish
 1. Finish readme and diagrams
+1. Calculate entropy of final password
 
 ### Later
 
@@ -35,6 +35,7 @@ Password derivator using hash functions written in Golang
 - Minimal memory footprint for security purposes using pointers for all sensitive data
 - Multiple rounds of generation for change password requirement
 - Dump Database tables to CSV files
+- Options to unallow symbols, uppercase etc.
 
 ## Overview of security scheme
 
