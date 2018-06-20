@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"golang.org/x/crypto/argon2"
-	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
 func createMasterDigest(masterPasswordSHA3 *[32]byte, birthdateSHA3 *[32]byte) (masterDigest *[]byte) {
@@ -37,17 +36,6 @@ func writeMasterDigest(identifiant string, protection string, masterDigest *[]by
 	err = ioutil.WriteFile(dir+"/"+masterDigestFilename, *content, 0644)
 	clearByteSlice(content)
 	return err
-}
-
-func showHashProgress(argonTimePerRound int64) {
-	bar := pb.StartNew(int(argonTimeCost))
-	bar.SetRefreshRate(time.Millisecond * 150)
-	bar.ShowCounters = false
-	for i := 0; i < int(argonTimeCost); i++ {
-		bar.Increment()
-		time.Sleep(time.Millisecond * time.Duration(argonTimePerRound))
-	}
-	bar.FinishPrint("About to finish...")
 }
 
 func dateIsValid(date *[]byte) bool {

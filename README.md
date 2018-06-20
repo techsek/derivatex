@@ -9,6 +9,7 @@ Password derivator using hash functions written in Golang
 ### Urgent
 
 1. Unit testing to finish
+1. Delete function for identifiants
 1. Finish readme and diagrams
 1. Calculate entropy of final password
 

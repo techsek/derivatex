@@ -9,7 +9,7 @@ const argonTestRounds uint32 = 1
 
 const masterDigestFilename = "secret_digest.txt"
 const defaultPasswordLength = 20
-const identifiantsFilename = "identifiants.csv"
 const databaseFilename = "database"
+const defaultTableToDump = "identifiants"
 
 const version = 1

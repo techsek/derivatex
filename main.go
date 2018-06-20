@@ -11,12 +11,14 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/atotto/clipboard"
 	"github.com/fatih/color"
 	"github.com/mdp/qrterminal"
 	ps "github.com/nbutton23/zxcvbn-go"
 	"golang.org/x/crypto/ssh/terminal"
+	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
 // TODO clipboard Linux, Unix (requires 'xclip' or 'xsel' command to be installed)
@@ -39,9 +41,10 @@ func main() {
 	noUppercasePtr := generateCommand.Bool("nouppercase", false, "Force the password to contain no uppercase letter")
 	noLowercasePtr := generateCommand.Bool("nolowercase", false, "Force the password to contain no lowercase letter")
 	dumpCommand := flag.NewFlagSet("dump", flag.ExitOnError)
-	dumpTablePtr := dumpCommand.String("table", "identifiants", "SQLite table name to dump to CSV file")
+	dumpTablePtr := dumpCommand.String("table", defaultTableToDump, "SQLite table name to dump to CSV file")
 	searchCommand := flag.NewFlagSet("search", flag.ExitOnError)
 	// TODO search flags
+	// TODO delete entry
 	if len(os.Args) < 2 {
 		displayUsageAndExit()
 	}
@@ -57,7 +60,7 @@ func main() {
 		if createCommand.Parsed() {
 			createInteractive()
 		}
-	case "generate": // TODO make better
+	case "generate": // TODO make better with config options
 		if len(os.Args) < 3 {
 			color.HiRed("Website name is missing after command generate")
 			displayUsageAndExit()
@@ -311,14 +314,39 @@ func createInteractive() {
 			break
 		}
 		color.HiWhite("Computing master digest...")
-		go showHashProgress(argonTimePerRound) // TODO channel to quit go routine
+		stopchan := make(chan struct{})
+		stoppedchan := make(chan struct{})
+		go func() {
+			defer close(stoppedchan)
+			bar := pb.StartNew(int(argonTimeCost))
+			bar.SetRefreshRate(time.Millisecond * 150)
+			bar.ShowCounters = false
+			var i uint32
+			for {
+				select {
+				default:
+					if i == argonTimeCost {
+						bar.FinishPrint(color.HiGreenString("About to finish..."))
+						return
+					}
+					bar.Increment()
+					i++
+					time.Sleep(time.Millisecond * time.Duration(argonTimePerRound))
+				case <-stopchan:
+					bar.FinishPrint(color.HiGreenString("Computation finished!"))
+					return
+				}
+			}
+		}()
 		masterDigest := createMasterDigest(masterPasswordSHA3, birthdateSHA3)
 		// masterDigest is argonDigestSize bytes long
 		clearByteArray32(masterPasswordSHA3)
 		clearByteArray32(birthdateSHA3)
-		color.HiGreen("\n\nMaster digest computed successfully")
+		close(stopchan) // stop the progress bar
+		<-stoppedchan   // wait for it to stop
+		color.HiGreen("Master digest computed successfully")
 		protection := "none"
-		optionPin := readInput("\n\n[OPTIONAL] To generate a password, would you like to setup a 4 digit pin code? (yes/no) [no]: ")
+		optionPin := readInput("[OPTIONAL] To generate a password, would you like to setup a 4 digit pin code? (yes/no) [no]: ")
 		if optionPin == "yes" {
 			protection = "pin"
 			for {
