@@ -44,7 +44,10 @@ func main() {
 	dumpTablePtr := dumpCommand.String("table", defaultTableToDump, "SQLite table name to dump to CSV file")
 	searchCommand := flag.NewFlagSet("search", flag.ExitOnError)
 	// TODO search flags
-	// TODO delete entry
+	deleteCommand := flag.NewFlagSet("delete", flag.ExitOnError)
+	// TODO delete flags
+	listCommand := flag.NewFlagSet("list", flag.ExitOnError)
+	// TODO list flags
 	if len(os.Args) < 2 {
 		displayUsageAndExit()
 	}
@@ -102,6 +105,65 @@ func main() {
 			for _, identifiant := range identifiants {
 				color.White(identifiant.website + " | " + identifiant.user + " | " + strconv.FormatInt(int64(identifiant.passwordLength), 10) + " | " + strconv.FormatInt(identifiant.unixTime, 10) + " | " + strconv.FormatInt(int64(identifiant.round), 10) + " | " + strconv.FormatUint(uint64(identifiant.version), 10))
 			}
+		}
+	case "delete":
+		if len(os.Args) < 3 {
+			color.HiRed("Website string to delete is missing after command delete")
+			displayUsageAndExit()
+		}
+		deleteCommand.Parse(os.Args[3:])
+		if deleteCommand.Parsed() {
+			website := os.Args[2]
+			identifiants, err := findIdentifiantsByWebsite(website)
+			if err != nil {
+				color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
+				return
+			}
+			if len(identifiants) == 0 {
+				color.Yellow("No identifiants found for website '" + website + "'")
+			} else if len(identifiants) == 1 {
+				deleteIdentifiant(website, identifiants[0].user)
+				color.HiGreen("The following identifiant has been deleted from the database:\n" + identifiants[0].website + " | " + identifiants[0].user + " | " + strconv.FormatInt(int64(identifiants[0].passwordLength), 10) + " | " + strconv.FormatInt(identifiants[0].unixTime, 10) + " | " + strconv.FormatInt(int64(identifiants[0].round), 10) + " | " + strconv.FormatUint(uint64(identifiants[0].version), 10))
+			} else {
+				color.HiWhite("Website | User | Unix time | Round | Program version")
+				for _, identifiant := range identifiants {
+					color.White(identifiant.website + " | " + identifiant.user + " | " + strconv.FormatInt(int64(identifiant.passwordLength), 10) + " | " + strconv.FormatInt(identifiant.unixTime, 10) + " | " + strconv.FormatInt(int64(identifiant.round), 10) + " | " + strconv.FormatUint(uint64(identifiant.version), 10))
+				}
+				var user string
+				for {
+					user = readInput("Please specify which user you want to delete: ")
+					identifiant, err := findIdentifiant(website, user)
+					if err != nil {
+						color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
+						return
+					}
+					if identifiant.website == "" { // not found
+						color.Yellow("Identifiant with website '" + website + "' and user '" + user + "' was not found. Please try again.")
+						continue
+					}
+					break
+				}
+				err = deleteIdentifiant(website, user)
+				if err != nil {
+					color.HiRed("Error deleting the identifiant: " + err.Error())
+					return
+				}
+				color.HiGreen("The identifiant has been deleted from the database")
+			}
+		}
+	case "list":
+		listCommand.Parse(os.Args[2:])
+		if listCommand.Parsed() {
+			identifiants, err := getAllIdentifiants()
+			if err != nil {
+				color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
+				return
+			}
+			color.HiWhite("Website | User | Unix time | Round | Program version")
+			for _, identifiant := range identifiants {
+				color.White(identifiant.website + " | " + identifiant.user + " | " + strconv.FormatInt(int64(identifiant.passwordLength), 10) + " | " + strconv.FormatInt(identifiant.unixTime, 10) + " | " + strconv.FormatInt(int64(identifiant.round), 10) + " | " + strconv.FormatUint(uint64(identifiant.version), 10))
+			}
+			color.HiGreen("Retrieved " + strconv.FormatInt(int64(len(identifiants)), 10) + " identifiants from database.")
 		}
 	default:
 		color.HiRed("Command '" + command + "' not recognized.")

@@ -69,6 +69,7 @@ func findIdentifiantsByWebsite(website string) (identifiants []identifiantType, 
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var identifiant identifiantType
 	for rows.Next() {
 		err = rows.Scan(
@@ -97,6 +98,7 @@ func findIdentifiant(website string, user string) (identifiant identifiantType, 
 	if err != nil {
 		return identifiant, err
 	}
+	defer rows.Close()
 	if rows.Next() {
 		err = rows.Scan(
 			&identifiant.website,
@@ -132,6 +134,7 @@ func searchIdentifiants(searchString string) (identifiants []identifiantType, er
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var identifiant identifiantType
 	for rows.Next() {
 		err = rows.Scan(
@@ -160,6 +163,7 @@ func dumpTable(tableName string) error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 	var identifiant identifiantType
 	output := strings.Join(identifiantTypeLegendStrings(), ",") + "\n"
 	for rows.Next() {
@@ -179,4 +183,38 @@ func dumpTable(tableName string) error {
 	}
 	err = ioutil.WriteFile(dir+"/"+tableName+".csv", []byte(output), 0644)
 	return err
+}
+
+func deleteIdentifiant(website string, user string) (err error) {
+	statement, err := database.Prepare("DELETE FROM identifiants WHERE website = ? AND user = ?")
+	if err != nil {
+		return err
+	}
+	_, err = statement.Exec(website, user)
+	return err
+}
+
+func getAllIdentifiants() (identifiants []identifiantType, err error) {
+	rows, err := database.Query("SELECT * FROM identifiants")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var identifiant identifiantType
+	for rows.Next() {
+		err = rows.Scan(
+			&identifiant.website,
+			&identifiant.user,
+			&identifiant.passwordLength,
+			&identifiant.unixTime,
+			&identifiant.round,
+			&identifiant.version,
+			&identifiant.unallowedCharacters,
+		)
+		if err != nil {
+			return nil, err
+		}
+		identifiants = append(identifiants, identifiant)
+	}
+	return identifiants, nil
 }
