@@ -23,7 +23,7 @@ func initiateDatabaseIfNeeded() (err error) {
 	}
 	var statement *sql.Stmt
 	statement, err = database.Prepare(
-		"CREATE TABLE IF NOT EXISTS identifiants (website TEXT, user TEXT, password_length INTEGER, unix_time INTEGER, round INTEGER, version INTEGER, unallowed_characters TEXT, PRIMARY KEY(website, user))")
+		"CREATE TABLE IF NOT EXISTS identifications (website TEXT, user TEXT, password_length INTEGER, unix_time INTEGER, round INTEGER, version INTEGER, unallowed_characters TEXT, PRIMARY KEY(website, user))")
 	if err != nil {
 		return err
 	}
@@ -34,7 +34,7 @@ func initiateDatabaseIfNeeded() (err error) {
 	return nil
 }
 
-type identifiantType struct {
+type identificationType struct {
 	website             string
 	user                string
 	passwordLength      uint8 // max 255 otherwise it's ridiculous
@@ -44,24 +44,33 @@ type identifiantType struct {
 	unallowedCharacters string
 }
 
-func identifiantTypeLegendStrings() []string {
+func identificationTypeLegendStrings() []string {
 	return []string{"Website", "User", "Password Length", "Round", "Date", "Program version", "Unallowed characters"}
 }
 
-func (identifiant *identifiantType) toStrings() []string {
+func (identification *identificationType) toStrings() []string {
 	return []string{
-		identifiant.website,
-		identifiant.user,
-		strconv.FormatUint(uint64(identifiant.passwordLength), 10),
-		strconv.FormatUint(uint64(identifiant.round), 10),
-		time.Unix(identifiant.unixTime, 0).Format("02/01/2006"),
-		strconv.FormatUint(uint64(identifiant.version), 10),
-		identifiant.unallowedCharacters,
+		identification.website,
+		identification.user,
+		strconv.FormatUint(uint64(identification.passwordLength), 10),
+		strconv.FormatUint(uint64(identification.round), 10),
+		time.Unix(identification.unixTime, 0).Format("02/01/2006"),
+		strconv.FormatUint(uint64(identification.version), 10),
+		identification.unallowedCharacters,
 	}
 }
 
-func findIdentifiantsByWebsite(website string) (identifiants []identifiantType, err error) {
-	statement, err := database.Prepare("SELECT * FROM identifiants WHERE website = ?")
+func (identification *identificationType) equal(other *identificationType) bool {
+	return identification.website == other.website &&
+		identification.user == other.user &&
+		identification.passwordLength == other.passwordLength &&
+		identification.round == other.round &&
+		identification.version == other.version &&
+		identification.unallowedCharacters == other.unallowedCharacters
+}
+
+func findidentificationsByWebsite(website string) (identifications []identificationType, err error) {
+	statement, err := database.Prepare("SELECT * FROM identifications WHERE website = ?")
 	if err != nil {
 		return nil, err
 	}
@@ -70,63 +79,63 @@ func findIdentifiantsByWebsite(website string) (identifiants []identifiantType, 
 		return nil, err
 	}
 	defer rows.Close()
-	var identifiant identifiantType
+	var identification identificationType
 	for rows.Next() {
 		err = rows.Scan(
-			&identifiant.website,
-			&identifiant.user,
-			&identifiant.passwordLength,
-			&identifiant.unixTime,
-			&identifiant.round,
-			&identifiant.version,
-			&identifiant.unallowedCharacters,
+			&identification.website,
+			&identification.user,
+			&identification.passwordLength,
+			&identification.unixTime,
+			&identification.round,
+			&identification.version,
+			&identification.unallowedCharacters,
 		)
 		if err != nil {
 			return nil, err
 		}
-		identifiants = append(identifiants, identifiant)
+		identifications = append(identifications, identification)
 	}
-	return identifiants, nil
+	return identifications, nil
 }
 
-func findIdentifiant(website string, user string) (identifiant identifiantType, err error) {
-	statement, err := database.Prepare("SELECT * FROM identifiants WHERE website = ? AND user = ?")
+func findidentification(website string, user string) (identification identificationType, err error) {
+	statement, err := database.Prepare("SELECT * FROM identifications WHERE website = ? AND user = ?")
 	if err != nil {
-		return identifiant, err
+		return identification, err
 	}
 	rows, err := statement.Query(website, user)
 	if err != nil {
-		return identifiant, err
+		return identification, err
 	}
 	defer rows.Close()
 	if rows.Next() {
 		err = rows.Scan(
-			&identifiant.website,
-			&identifiant.user,
-			&identifiant.passwordLength,
-			&identifiant.unixTime,
-			&identifiant.round,
-			&identifiant.version,
-			&identifiant.unallowedCharacters,
+			&identification.website,
+			&identification.user,
+			&identification.passwordLength,
+			&identification.unixTime,
+			&identification.round,
+			&identification.version,
+			&identification.unallowedCharacters,
 		)
 		if err != nil {
-			return identifiant, err
+			return identification, err
 		}
 	}
-	return identifiant, nil
+	return identification, nil
 }
 
-func insertIdentifiant(website, user string, passwordLength uint8, round uint16, unallowedCharacters string) (err error) {
-	statement, err := database.Prepare("INSERT INTO identifiants (website, user, password_length, unix_time, round, version, unallowed_characters) VALUES (?, ?, ?, ?, ?, ?, ?)")
+func insertidentification(identification identificationType) (err error) {
+	statement, err := database.Prepare("INSERT INTO identifications (website, user, password_length, unix_time, round, version, unallowed_characters) VALUES (?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return err
 	}
-	_, err = statement.Exec(website, user, passwordLength, time.Now().Unix(), round, version, unallowedCharacters)
+	_, err = statement.Exec(identification.website, identification.user, identification.passwordLength, identification.unixTime, identification.round, identification.version, identification.unallowedCharacters)
 	return err
 }
 
-func searchIdentifiants(searchString string) (identifiants []identifiantType, err error) {
-	statement, err := database.Prepare("SELECT * FROM identifiants WHERE website LIKE ? OR user LIKE ?")
+func searchidentifications(searchString string) (identifications []identificationType, err error) {
+	statement, err := database.Prepare("SELECT * FROM identifications WHERE website LIKE ? OR user LIKE ?")
 	if err != nil {
 		return nil, err
 	}
@@ -135,23 +144,23 @@ func searchIdentifiants(searchString string) (identifiants []identifiantType, er
 		return nil, err
 	}
 	defer rows.Close()
-	var identifiant identifiantType
+	var identification identificationType
 	for rows.Next() {
 		err = rows.Scan(
-			&identifiant.website,
-			&identifiant.user,
-			&identifiant.passwordLength,
-			&identifiant.unixTime,
-			&identifiant.round,
-			&identifiant.version,
-			&identifiant.unallowedCharacters,
+			&identification.website,
+			&identification.user,
+			&identification.passwordLength,
+			&identification.unixTime,
+			&identification.round,
+			&identification.version,
+			&identification.unallowedCharacters,
 		)
 		if err != nil {
 			return nil, err
 		}
-		identifiants = append(identifiants, identifiant)
+		identifications = append(identifications, identification)
 	}
-	return identifiants, nil
+	return identifications, nil
 }
 
 func dumpTable(tableName string) error {
@@ -164,29 +173,29 @@ func dumpTable(tableName string) error {
 		return err
 	}
 	defer rows.Close()
-	var identifiant identifiantType
-	output := strings.Join(identifiantTypeLegendStrings(), ",") + "\n"
+	var identification identificationType
+	output := strings.Join(identificationTypeLegendStrings(), ",") + "\n"
 	for rows.Next() {
 		err = rows.Scan(
-			&identifiant.website,
-			&identifiant.user,
-			&identifiant.passwordLength,
-			&identifiant.unixTime,
-			&identifiant.round,
-			&identifiant.version,
-			&identifiant.unallowedCharacters,
+			&identification.website,
+			&identification.user,
+			&identification.passwordLength,
+			&identification.unixTime,
+			&identification.round,
+			&identification.version,
+			&identification.unallowedCharacters,
 		)
 		if err != nil {
 			return err
 		}
-		output += strings.Join(identifiant.toStrings(), ",") + "\n"
+		output += strings.Join(identification.toStrings(), ",") + "\n"
 	}
 	err = ioutil.WriteFile(dir+"/"+tableName+".csv", []byte(output), 0644)
 	return err
 }
 
-func deleteIdentifiant(website string, user string) (err error) {
-	statement, err := database.Prepare("DELETE FROM identifiants WHERE website = ? AND user = ?")
+func deleteidentification(website string, user string) (err error) {
+	statement, err := database.Prepare("DELETE FROM identifications WHERE website = ? AND user = ?")
 	if err != nil {
 		return err
 	}
@@ -194,27 +203,27 @@ func deleteIdentifiant(website string, user string) (err error) {
 	return err
 }
 
-func getAllIdentifiants() (identifiants []identifiantType, err error) {
-	rows, err := database.Query("SELECT * FROM identifiants")
+func getAllidentifications() (identifications []identificationType, err error) {
+	rows, err := database.Query("SELECT * FROM identifications")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var identifiant identifiantType
+	var identification identificationType
 	for rows.Next() {
 		err = rows.Scan(
-			&identifiant.website,
-			&identifiant.user,
-			&identifiant.passwordLength,
-			&identifiant.unixTime,
-			&identifiant.round,
-			&identifiant.version,
-			&identifiant.unallowedCharacters,
+			&identification.website,
+			&identification.user,
+			&identification.passwordLength,
+			&identification.unixTime,
+			&identification.round,
+			&identification.version,
+			&identification.unallowedCharacters,
 		)
 		if err != nil {
 			return nil, err
 		}
-		identifiants = append(identifiants, identifiant)
+		identifications = append(identifications, identification)
 	}
-	return identifiants, nil
+	return identifications, nil
 }

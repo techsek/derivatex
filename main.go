@@ -26,7 +26,7 @@ import (
 func displayUsageAndExit() { // TODO update
 	fmt.Println(color.HiWhiteString("Usage:") +
 		color.HiCyanString("\n./derivatex create") + color.HiWhiteString("\nCreate the master password digest needed to generate passwords") +
-		color.HiCyanString("\n\n./derivatex generate websitename [-length=20] [-user=email@domain.com]") + color.HiWhiteString("\nGenerate a password for a particular website name. Optionally set the password length and/or an identifiant different than the default one (stored in secretDigest)."))
+		color.HiCyanString("\n\n./derivatex generate websitename [-length=20] [-user=email@domain.com]") + color.HiWhiteString("\nGenerate a password for a particular website name. Optionally set the password length and/or an identification different than the default one (stored in secretDigest)."))
 	os.Exit(1)
 }
 
@@ -92,18 +92,18 @@ func main() {
 		}
 		searchCommand.Parse(os.Args[3:])
 		if searchCommand.Parsed() {
-			identifiants, err := searchIdentifiants(os.Args[2])
+			identifications, err := searchidentifications(os.Args[2])
 			if err != nil {
-				color.HiRed("The following error occurred when searching the identifiants for '" + os.Args[2] + "': " + err.Error())
+				color.HiRed("The following error occurred when searching the identifications for '" + os.Args[2] + "': " + err.Error())
 				return
 			}
-			if len(identifiants) == 0 {
-				color.HiWhite("No identifiants found for query string '" + os.Args[2] + "'")
+			if len(identifications) == 0 {
+				color.HiWhite("No identifications found for query string '" + os.Args[2] + "'")
 				return
 			}
 			color.HiWhite("Website | User | Unix time | Round | Program version")
-			for _, identifiant := range identifiants {
-				color.White(identifiant.website + " | " + identifiant.user + " | " + strconv.FormatInt(int64(identifiant.passwordLength), 10) + " | " + strconv.FormatInt(identifiant.unixTime, 10) + " | " + strconv.FormatInt(int64(identifiant.round), 10) + " | " + strconv.FormatUint(uint64(identifiant.version), 10))
+			for _, identification := range identifications {
+				color.White(identification.website + " | " + identification.user + " | " + strconv.FormatInt(int64(identification.passwordLength), 10) + " | " + strconv.FormatInt(identification.unixTime, 10) + " | " + strconv.FormatInt(int64(identification.round), 10) + " | " + strconv.FormatUint(uint64(identification.version), 10))
 			}
 		}
 	case "delete":
@@ -114,56 +114,60 @@ func main() {
 		deleteCommand.Parse(os.Args[3:])
 		if deleteCommand.Parsed() {
 			website := os.Args[2]
-			identifiants, err := findIdentifiantsByWebsite(website)
+			identifications, err := findidentificationsByWebsite(website)
 			if err != nil {
 				color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
 				return
 			}
-			if len(identifiants) == 0 {
-				color.Yellow("No identifiants found for website '" + website + "'")
-			} else if len(identifiants) == 1 {
-				deleteIdentifiant(website, identifiants[0].user)
-				color.HiGreen("The following identifiant has been deleted from the database:\n" + identifiants[0].website + " | " + identifiants[0].user + " | " + strconv.FormatInt(int64(identifiants[0].passwordLength), 10) + " | " + strconv.FormatInt(identifiants[0].unixTime, 10) + " | " + strconv.FormatInt(int64(identifiants[0].round), 10) + " | " + strconv.FormatUint(uint64(identifiants[0].version), 10))
+			if len(identifications) == 0 {
+				color.Yellow("No identifications found for website '" + website + "'")
+			} else if len(identifications) == 1 {
+				err = deleteidentification(website, identifications[0].user)
+				if err != nil {
+					color.HiRed("Error deleting the identification: " + err.Error())
+					return
+				}
+				color.HiGreen("The following identification has been deleted from the database:\n" + identifications[0].website + " | " + identifications[0].user + " | " + strconv.FormatInt(int64(identifications[0].passwordLength), 10) + " | " + strconv.FormatInt(identifications[0].unixTime, 10) + " | " + strconv.FormatInt(int64(identifications[0].round), 10) + " | " + strconv.FormatUint(uint64(identifications[0].version), 10))
 			} else {
 				color.HiWhite("Website | User | Unix time | Round | Program version")
-				for _, identifiant := range identifiants {
-					color.White(identifiant.website + " | " + identifiant.user + " | " + strconv.FormatInt(int64(identifiant.passwordLength), 10) + " | " + strconv.FormatInt(identifiant.unixTime, 10) + " | " + strconv.FormatInt(int64(identifiant.round), 10) + " | " + strconv.FormatUint(uint64(identifiant.version), 10))
+				for _, identification := range identifications {
+					color.White(identification.website + " | " + identification.user + " | " + strconv.FormatInt(int64(identification.passwordLength), 10) + " | " + strconv.FormatInt(identification.unixTime, 10) + " | " + strconv.FormatInt(int64(identification.round), 10) + " | " + strconv.FormatUint(uint64(identification.version), 10))
 				}
 				var user string
 				for {
 					user = readInput("Please specify which user you want to delete: ")
-					identifiant, err := findIdentifiant(website, user)
+					identification, err := findidentification(website, user)
 					if err != nil {
 						color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
 						return
 					}
-					if identifiant.website == "" { // not found
-						color.Yellow("Identifiant with website '" + website + "' and user '" + user + "' was not found. Please try again.")
+					if identification.website == "" { // not found
+						color.Yellow("identification with website '" + website + "' and user '" + user + "' was not found. Please try again.")
 						continue
 					}
 					break
 				}
-				err = deleteIdentifiant(website, user)
+				err = deleteidentification(website, user)
 				if err != nil {
-					color.HiRed("Error deleting the identifiant: " + err.Error())
+					color.HiRed("Error deleting the identification: " + err.Error())
 					return
 				}
-				color.HiGreen("The identifiant has been deleted from the database")
+				color.HiGreen("The identification has been deleted from the database")
 			}
 		}
 	case "list":
 		listCommand.Parse(os.Args[2:])
 		if listCommand.Parsed() {
-			identifiants, err := getAllIdentifiants()
+			identifications, err := getAllidentifications()
 			if err != nil {
 				color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
 				return
 			}
-			color.HiWhite("Website | User | Unix time | Round | Program version")
-			for _, identifiant := range identifiants {
-				color.White(identifiant.website + " | " + identifiant.user + " | " + strconv.FormatInt(int64(identifiant.passwordLength), 10) + " | " + strconv.FormatInt(identifiant.unixTime, 10) + " | " + strconv.FormatInt(int64(identifiant.round), 10) + " | " + strconv.FormatUint(uint64(identifiant.version), 10))
+			color.HiWhite(strings.Join(identificationTypeLegendStrings(), " | "))
+			for _, identification := range identifications {
+				color.White(strings.Join(identification.toStrings(), " | "))
 			}
-			color.HiGreen("Retrieved " + strconv.FormatInt(int64(len(identifiants)), 10) + " identifiants from database.")
+			color.HiGreen("Retrieved " + strconv.FormatInt(int64(len(identifications)), 10) + " identifications from database.")
 		}
 	default:
 		color.HiRed("Command '" + command + "' not recognized.")
@@ -217,27 +221,52 @@ func generate(website, user string, passwordLength uint8, round uint16, unallowe
 		color.Yellow("An error occurred reading the master digest file: " + err.Error())
 		return
 	}
-	identifiants, err := findIdentifiantsByWebsite(website)
+	if user == "" { // default flag
+		user = defaultUser
+	}
+	newidentification := identificationType{
+		website:             website,
+		user:                user,
+		passwordLength:      passwordLength,
+		round:               round,
+		unixTime:            time.Now().Unix(),
+		unallowedCharacters: unallowedCharacters,
+		version:             version,
+	}
+	identifications, err := findidentificationsByWebsite(website)
 	if err != nil {
 		color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
 		return
 	}
-	if user == "" { // default flag
-		user = defaultUser
-	}
-	if len(identifiants) > 0 {
-		identifiantExists := false
-		for _, identifiant := range identifiants {
-			if user == identifiant.user { // identifiant already exists in database
-				identifiantExists = true
+	var replaceidentification bool
+	if len(identifications) > 0 {
+		var identificationExists bool
+		for _, identification := range identifications {
+			if identification.user == newidentification.user { // identification already exists in database
+				identificationExists = true
+				if !identification.equal(&newidentification) {
+					color.HiWhite("A password for the following identification has already been generated previously:")
+					color.White(strings.Join(identificationTypeLegendStrings(), " | "))
+					color.White(strings.Join(identification.toStrings(), " | "))
+					color.HiWhite("You are trying to create a password with the following identification:")
+					color.White(strings.Join(identificationTypeLegendStrings(), " | "))
+					color.White(strings.Join(newidentification.toStrings(), " | "))
+					continueGenerate := readInput("Replace the old identification? (yes/no) [no]: ")
+					if continueGenerate != "yes" {
+						return
+					}
+					replaceidentification = true
+				} else { // same identification as stored in database
+					newidentification.unixTime = identification.unixTime
+				}
 				break
 			}
 		}
-		if !identifiantExists {
-			color.HiWhite("Password(s) for the following identifiant(s) have already been generated previously:")
-			color.White(strings.Join(identifiantTypeLegendStrings(), " | "))
-			for _, identifiant := range identifiants {
-				color.White(strings.Join(identifiant.toStrings(), " | "))
+		if !identificationExists {
+			color.HiWhite("Password(s) for the following identification(s) have already been generated previously:")
+			color.White(strings.Join(identificationTypeLegendStrings(), " | "))
+			for _, identification := range identifications {
+				color.White(strings.Join(identification.toStrings(), " | "))
 			}
 			continueGenerate := readInput("Generate a password for '" + website + "' and new user '" + user + "'? (yes/no) [no]: ")
 			if continueGenerate != "yes" {
@@ -281,7 +310,15 @@ func generate(website, user string, passwordLength uint8, round uint16, unallowe
 	}
 
 	password := determinePassword(masterDigest, []byte(website), passwordLength, round, unallowedCharacters)
-	insertIdentifiant(website, user, passwordLength, round, unallowedCharacters)
+	// TODO transaction
+	if replaceidentification {
+		err := deleteidentification(newidentification.website, newidentification.user)
+		if err != nil {
+			color.HiRed("Error deleting the identification: " + err.Error())
+			return
+		}
+	}
+	insertidentification(newidentification)
 	color.HiGreen("Password QR Code:")
 	config := qrterminal.Config{
 		Level:     qrterminal.M,
