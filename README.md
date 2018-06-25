@@ -8,8 +8,11 @@ Password derivator using hash functions written in Golang
 
 ### Urgent
 
+1. Show user of password generated
+1. Fix working on a different drive
 1. Unit testing to finish
 1. Finish readme and diagrams
+1. Propose to generate password for already existing user
 1. Calculate entropy of final password
 
 ### Later
@@ -22,6 +25,7 @@ Password derivator using hash functions written in Golang
 - Yubikeys / Google Authenticator
 - Generate private keys i.e. RSA
 - Better search
+- Generate seed words (i.e. 12 words for cardano)
 
 ## Features
 
@@ -83,7 +87,7 @@ See more details below
 
 - Each password generation creates a record in a SQLite database containing:
   - website name
-  - identifiant (email, phone number, username)
+  - identification (email, phone number, username)
   - Password Length (in case a certain length was required)
 - This database can be searched and the password can be generated again
 - The database can be dumped into a text file

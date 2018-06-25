@@ -10,6 +10,13 @@ const argonTestRounds uint32 = 1
 const masterDigestFilename = "secret_digest.txt"
 const defaultPasswordLength = 20
 const databaseFilename = "database"
-const defaultTableToDump = "identifiants"
+const defaultTableToDump = "identifications"
 
 const version = 1
+
+const (
+	symbols    = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+	digits     = "0123456789"
+	lowercases = "abcdefghijklmnopqrstuvwxyz"
+	uppercases = "ABCDEFGHIKLMNOPQRSTVXYZ"
+)

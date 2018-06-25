@@ -86,7 +86,7 @@ var (
 	asciiDigitBounds     = []byteBounds{byteBounds{48, 57}}
 	asciiUppercaseBounds = []byteBounds{byteBounds{65, 90}}
 	asciiLowercaseBounds = []byteBounds{byteBounds{97, 122}}
-	asciiSymbolBounds    = []byteBounds{byteBounds{33, 47}, byteBounds{58, 64}, byteBounds{94, 95}}
+	asciiSymbolBounds    = []byteBounds{byteBounds{33, 47}, byteBounds{58, 64}, byteBounds{91, 96}, byteBounds{123, 126}}
 )
 
 func byteInBounds(b byte, bounds []byteBounds) bool {
@@ -114,7 +114,7 @@ func byteAsciiType(b byte) asciiType {
 	return asciiOther
 }
 
-func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength uint8, round uint16, unallowedCharacters string) string {
+func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength uint8, round uint16, unallowedCharacters unallowedCharactersType) string {
 	// Hashes masterDigest+websiteName to obtain an initial
 	input := new([]byte)
 	*input = append(*masterDigest, websiteName...)
@@ -141,11 +141,10 @@ func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength 
 
 	// Create and shuffle an initial order of Ascii character types
 	var asciiOrder []asciiType
-	var lowercaseAllowed, uppercaseAllowed, digitAllowed, symbolAllowed bool
-	lowercaseAllowed = strings.Index(unallowedCharacters, "lowercase") == -1
-	uppercaseAllowed = strings.Index(unallowedCharacters, "uppercase") == -1
-	digitAllowed = strings.Index(unallowedCharacters, "digit") == -1
-	symbolAllowed = strings.Index(unallowedCharacters, "symbol") == -1
+	lowercaseAllowed := len(unallowedCharacters[asciiLowercase]) < len(lowercases)
+	uppercaseAllowed := len(unallowedCharacters[asciiUppercase]) < len(uppercases)
+	digitAllowed := len(unallowedCharacters[asciiDigit]) < len(digits)
+	symbolAllowed := len(unallowedCharacters[asciiSymbol]) < len(symbols)
 	if lowercaseAllowed {
 		asciiOrder = append(asciiOrder, asciiLowercase)
 	}
@@ -183,7 +182,7 @@ func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength 
 		}
 	}
 	for i := range password {
-		for byteAsciiType(password[i]) != asciiOrder[i] {
+		for byteAsciiType(password[i]) != asciiOrder[i] || strings.Contains(unallowedCharacters[byteAsciiType(password[i])], string(password[i])) {
 			password[i] = (password[i] + byte(randSource.Int63())) % 127 // 127 is the max of all possible ASCII characters of interest
 		}
 	}
@@ -198,4 +197,54 @@ func shuffleAsciiOrder(asciiOrder *[]asciiType, randSource rand.Source) {
 	}
 }
 
-// TODO generate RSA keys etc.
+type unallowedCharactersType map[asciiType]string
+
+func (unallowedCharacters *unallowedCharactersType) serialize() (s string) {
+	for k := range *unallowedCharacters {
+		s += (*unallowedCharacters)[k]
+	}
+	return s
+}
+
+func (unallowedCharacters *unallowedCharactersType) isAnythingAllowed() bool {
+	if len((*unallowedCharacters)[asciiDigit]) < len(digits) {
+		return true
+	}
+	if len((*unallowedCharacters)[asciiSymbol]) < len(symbols) {
+		return true
+	}
+	if len((*unallowedCharacters)[asciiLowercase]) < len(lowercases) {
+		return true
+	}
+	if len((*unallowedCharacters)[asciiUppercase]) < len(uppercases) {
+		return true
+	}
+	return false
+}
+
+func buildUnallowedCharacters(noSymbol, noDigit, noUppercase, noLowercase bool, excludeCharacters string) (unallowedCharacters unallowedCharactersType) {
+	unallowedCharacters = make(unallowedCharactersType)
+	unallowedCharacters[asciiSymbol] = ""
+	unallowedCharacters[asciiDigit] = ""
+	unallowedCharacters[asciiUppercase] = ""
+	unallowedCharacters[asciiLowercase] = ""
+	if noSymbol {
+		unallowedCharacters[asciiSymbol] += symbols
+	}
+	if noDigit {
+		unallowedCharacters[asciiDigit] += digits
+	}
+	if noUppercase {
+		unallowedCharacters[asciiUppercase] += uppercases
+	}
+	if noLowercase {
+		unallowedCharacters[asciiLowercase] += lowercases
+	}
+	for i := range excludeCharacters {
+		t := byteAsciiType(excludeCharacters[i])
+		if !strings.Contains(unallowedCharacters[t], string(excludeCharacters[i])) {
+			unallowedCharacters[t] += string(excludeCharacters[i])
+		}
+	}
+	return unallowedCharacters
+}

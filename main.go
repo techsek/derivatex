@@ -40,6 +40,8 @@ func main() {
 	noDigitPtr := generateCommand.Bool("nodigit", false, "Force the password to contain no digit")
 	noUppercasePtr := generateCommand.Bool("nouppercase", false, "Force the password to contain no uppercase letter")
 	noLowercasePtr := generateCommand.Bool("nolowercase", false, "Force the password to contain no lowercase letter")
+	excludeCharactersPtr := generateCommand.String("exclude", "", "Characters to exclude from the final password")
+	notePtr := generateCommand.String("note", "", "Extra personal note you want to add")
 	dumpCommand := flag.NewFlagSet("dump", flag.ExitOnError)
 	dumpTablePtr := dumpCommand.String("table", defaultTableToDump, "SQLite table name to dump to CSV file")
 	searchCommand := flag.NewFlagSet("search", flag.ExitOnError)
@@ -72,8 +74,8 @@ func main() {
 		website = os.Args[2]
 		generateCommand.Parse(os.Args[3:])
 		if generateCommand.Parsed() {
-			unallowedCharactersString := buildUnallowedCharactersString(*noSymbolPtr, *noDigitPtr, *noUppercasePtr, *noLowercasePtr)
-			generate(website, *userPtr, uint8(*passwordLengthPtr), uint16(*roundPtr), unallowedCharactersString)
+			unallowedCharacters := buildUnallowedCharacters(*noSymbolPtr, *noDigitPtr, *noUppercasePtr, *noLowercasePtr, *excludeCharactersPtr)
+			generate(website, *userPtr, uint8(*passwordLengthPtr), uint16(*roundPtr), unallowedCharacters, *notePtr)
 		}
 	case "dump":
 		dumpCommand.Parse(os.Args[2:])
@@ -92,7 +94,7 @@ func main() {
 		}
 		searchCommand.Parse(os.Args[3:])
 		if searchCommand.Parsed() {
-			identifications, err := searchidentifications(os.Args[2])
+			identifications, err := searchIdentifications(os.Args[2])
 			if err != nil {
 				color.HiRed("The following error occurred when searching the identifications for '" + os.Args[2] + "': " + err.Error())
 				return
@@ -102,8 +104,8 @@ func main() {
 				return
 			}
 			color.HiWhite("Website | User | Unix time | Round | Program version")
-			for _, identification := range identifications {
-				color.White(identification.website + " | " + identification.user + " | " + strconv.FormatInt(int64(identification.passwordLength), 10) + " | " + strconv.FormatInt(identification.unixTime, 10) + " | " + strconv.FormatInt(int64(identification.round), 10) + " | " + strconv.FormatUint(uint64(identification.version), 10))
+			for i := range identifications {
+				color.White(strings.Join(identifications[i].toStrings(), " | "))
 			}
 		}
 	case "delete":
@@ -114,7 +116,7 @@ func main() {
 		deleteCommand.Parse(os.Args[3:])
 		if deleteCommand.Parsed() {
 			website := os.Args[2]
-			identifications, err := findidentificationsByWebsite(website)
+			identifications, err := findIdentificationsByWebsite(website)
 			if err != nil {
 				color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
 				return
@@ -122,21 +124,22 @@ func main() {
 			if len(identifications) == 0 {
 				color.Yellow("No identifications found for website '" + website + "'")
 			} else if len(identifications) == 1 {
-				err = deleteidentification(website, identifications[0].user)
+				err = deleteIdentification(website, identifications[0].user)
 				if err != nil {
 					color.HiRed("Error deleting the identification: " + err.Error())
 					return
 				}
-				color.HiGreen("The following identification has been deleted from the database:\n" + identifications[0].website + " | " + identifications[0].user + " | " + strconv.FormatInt(int64(identifications[0].passwordLength), 10) + " | " + strconv.FormatInt(identifications[0].unixTime, 10) + " | " + strconv.FormatInt(int64(identifications[0].round), 10) + " | " + strconv.FormatUint(uint64(identifications[0].version), 10))
+				color.HiGreen("The following identification has been deleted from the database:\n" +
+					strings.Join(identifications[0].toStrings(), " | "))
 			} else {
-				color.HiWhite("Website | User | Unix time | Round | Program version")
-				for _, identification := range identifications {
-					color.White(identification.website + " | " + identification.user + " | " + strconv.FormatInt(int64(identification.passwordLength), 10) + " | " + strconv.FormatInt(identification.unixTime, 10) + " | " + strconv.FormatInt(int64(identification.round), 10) + " | " + strconv.FormatUint(uint64(identification.version), 10))
+				color.HiWhite(strings.Join(identificationTypeLegendStrings(), " | "))
+				for i := range identifications {
+					color.White(strings.Join(identifications[i].toStrings(), " | "))
 				}
 				var user string
 				for {
 					user = readInput("Please specify which user you want to delete: ")
-					identification, err := findidentification(website, user)
+					identification, err := findIdentification(website, user)
 					if err != nil {
 						color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
 						return
@@ -147,7 +150,7 @@ func main() {
 					}
 					break
 				}
-				err = deleteidentification(website, user)
+				err = deleteIdentification(website, user)
 				if err != nil {
 					color.HiRed("Error deleting the identification: " + err.Error())
 					return
@@ -158,7 +161,7 @@ func main() {
 	case "list":
 		listCommand.Parse(os.Args[2:])
 		if listCommand.Parsed() {
-			identifications, err := getAllidentifications()
+			identifications, err := getAllIdentifications()
 			if err != nil {
 				color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
 				return
@@ -195,25 +198,9 @@ func readSecret(prompt string) (secretPtr *[]byte, err error) {
 	return secretPtr, nil
 }
 
-func buildUnallowedCharactersString(noSymbol, noDigit, noUppercase, noLowercase bool) (unallowedCharacters string) {
-	if noSymbol {
-		unallowedCharacters += "symbol;"
-	}
-	if noDigit {
-		unallowedCharacters += "digit;"
-	}
-	if noUppercase {
-		unallowedCharacters += "uppercase;"
-	}
-	if noLowercase {
-		unallowedCharacters += "lowercase;"
-	}
-	return strings.TrimSuffix(unallowedCharacters, ";")
-}
-
-func generate(website, user string, passwordLength uint8, round uint16, unallowedCharacters string) {
-	if len(strings.Split(unallowedCharacters, ";")) == 4 {
-		color.HiRed("The password can't be generated with no symbol or digit or lowercase or uppercase")
+func generate(website, user string, passwordLength uint8, round uint16, unallowedCharacters unallowedCharactersType, note string) {
+	if !unallowedCharacters.isAnythingAllowed() {
+		color.HiRed("The password can't be generated with all possible characters excluded")
 		return
 	}
 	defaultUser, protection, masterDigest, err := readMasterDigest()
@@ -224,16 +211,17 @@ func generate(website, user string, passwordLength uint8, round uint16, unallowe
 	if user == "" { // default flag
 		user = defaultUser
 	}
-	newidentification := identificationType{
+	newIdentification := identificationType{
 		website:             website,
 		user:                user,
 		passwordLength:      passwordLength,
 		round:               round,
-		unixTime:            time.Now().Unix(),
-		unallowedCharacters: unallowedCharacters,
-		version:             version,
+		unallowedCharacters: unallowedCharacters.serialize(),
+		creationTime:        time.Now().Unix(), // set to previous database record if a record is found
+		programVersion:      version,
+		note:                note,
 	}
-	identifications, err := findidentificationsByWebsite(website)
+	identifications, err := findIdentificationsByWebsite(website)
 	if err != nil {
 		color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
 		return
@@ -241,23 +229,23 @@ func generate(website, user string, passwordLength uint8, round uint16, unallowe
 	var replaceidentification bool
 	if len(identifications) > 0 {
 		var identificationExists bool
-		for _, identification := range identifications {
-			if identification.user == newidentification.user { // identification already exists in database
+		for i := range identifications {
+			if identifications[i].user == newIdentification.user { // identification already exists in database
 				identificationExists = true
-				if !identification.equal(&newidentification) {
+				if !identifications[i].generationParamsEqualTo(&newIdentification) {
 					color.HiWhite("A password for the following identification has already been generated previously:")
 					color.White(strings.Join(identificationTypeLegendStrings(), " | "))
-					color.White(strings.Join(identification.toStrings(), " | "))
+					color.White(strings.Join(identifications[i].toStrings(), " | "))
 					color.HiWhite("You are trying to create a password with the following identification:")
 					color.White(strings.Join(identificationTypeLegendStrings(), " | "))
-					color.White(strings.Join(newidentification.toStrings(), " | "))
+					color.White(strings.Join(newIdentification.toStrings(), " | "))
 					continueGenerate := readInput("Replace the old identification? (yes/no) [no]: ")
 					if continueGenerate != "yes" {
 						return
 					}
 					replaceidentification = true
 				} else { // same identification as stored in database
-					newidentification.unixTime = identification.unixTime
+					newIdentification.creationTime = identifications[i].creationTime
 				}
 				break
 			}
@@ -265,8 +253,8 @@ func generate(website, user string, passwordLength uint8, round uint16, unallowe
 		if !identificationExists {
 			color.HiWhite("Password(s) for the following identification(s) have already been generated previously:")
 			color.White(strings.Join(identificationTypeLegendStrings(), " | "))
-			for _, identification := range identifications {
-				color.White(strings.Join(identification.toStrings(), " | "))
+			for i := range identifications {
+				color.White(strings.Join(identifications[i].toStrings(), " | "))
 			}
 			continueGenerate := readInput("Generate a password for '" + website + "' and new user '" + user + "'? (yes/no) [no]: ")
 			if continueGenerate != "yes" {
@@ -308,17 +296,16 @@ func generate(website, user string, passwordLength uint8, round uint16, unallowe
 			break
 		}
 	}
-
 	password := determinePassword(masterDigest, []byte(website), passwordLength, round, unallowedCharacters)
 	// TODO transaction
 	if replaceidentification {
-		err := deleteidentification(newidentification.website, newidentification.user)
+		err := deleteIdentification(newIdentification.website, newIdentification.user)
 		if err != nil {
 			color.HiRed("Error deleting the identification: " + err.Error())
 			return
 		}
 	}
-	insertidentification(newidentification)
+	insertIdentification(newIdentification)
 	color.HiGreen("Password QR Code:")
 	config := qrterminal.Config{
 		Level:     qrterminal.M,

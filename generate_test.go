@@ -97,7 +97,7 @@ func Test_byteAsciiType(t *testing.T) {
 		},
 		{
 			byte(125),
-			asciiOther,
+			asciiSymbol,
 		},
 		{
 			byte(150),
@@ -168,7 +168,7 @@ func Test_determinePassword(t *testing.T) {
 		websiteName         []byte
 		passwordLength      uint8
 		round               uint16
-		unallowedCharacters string
+		unallowedCharacters unallowedCharactersType
 		password            string
 	}{
 		{
@@ -176,7 +176,7 @@ func Test_determinePassword(t *testing.T) {
 			[]byte("google"),
 			0,
 			1,
-			"",
+			unallowedCharactersType{},
 			``,
 		},
 		{
@@ -184,7 +184,7 @@ func Test_determinePassword(t *testing.T) {
 			[]byte("google"),
 			2,
 			1,
-			"",
+			unallowedCharactersType{},
 			`Fq`,
 		},
 		{
@@ -192,7 +192,7 @@ func Test_determinePassword(t *testing.T) {
 			[]byte("google"),
 			4,
 			1,
-			"",
+			unallowedCharactersType{},
 			`jA9;`,
 		},
 		{
@@ -200,7 +200,7 @@ func Test_determinePassword(t *testing.T) {
 			[]byte("google"),
 			10,
 			1,
-			"",
+			unallowedCharactersType{},
 			`U1b5&O/Zyu`,
 		},
 		{
@@ -208,31 +208,31 @@ func Test_determinePassword(t *testing.T) {
 			[]byte("facebook"),
 			10,
 			1,
-			"",
-			`Otf_Im15A_`,
+			unallowedCharactersType{},
+			`Otf}Aw82T*`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
 			50,
 			1,
-			"",
-			`I7AlJ)/Py10&rX>+V:O59C^l9n*yYm"3R",j0s,u1F7c6c7MFg`,
+			unallowedCharactersType{},
+			`I7AlJ{/Ly69*qY~)V_O64N~k6a<mYp}9R~*x2a?p0P7w6y1NIr`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
 			10,
 			1,
-			"lowercase;uppercase",
-			`<636/*/-75`,
+			buildUnallowedCharacters(false, false, true, true, ""),
+			`<636/\/)38`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
 			10,
 			1,
-			"symbol;",
+			buildUnallowedCharacters(true, false, false, false, ""),
 			`j3nlfCL08L`,
 		},
 	}
