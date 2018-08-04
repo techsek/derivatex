@@ -83,11 +83,11 @@ type byteBounds struct {
 }
 
 var (
-	asciiDigitBounds     = []byteBounds{byteBounds{48, 57}}
-	asciiUppercaseBounds = []byteBounds{byteBounds{65, 90}}
-	asciiLowercaseBounds = []byteBounds{byteBounds{97, 122}}
-	asciiSymbolBounds    = []byteBounds{byteBounds{33, 47}, byteBounds{58, 64}, byteBounds{91, 96}, byteBounds{123, 126}}
-)
+	asciiDigitBounds     = []byteBounds{byteBounds{48, 57}}                                                               // 9
+	asciiUppercaseBounds = []byteBounds{byteBounds{65, 90}}                                                               // 25
+	asciiLowercaseBounds = []byteBounds{byteBounds{97, 122}}                                                              // 25
+	asciiSymbolBounds    = []byteBounds{byteBounds{33, 47}, byteBounds{58, 64}, byteBounds{91, 96}, byteBounds{123, 126}} // 28
+) // total of 87 characters
 
 func byteInBounds(b byte, bounds []byteBounds) bool {
 	for _, bound := range bounds {

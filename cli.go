@@ -21,12 +21,13 @@ import (
 
 func displayUsage() {
 	fmt.Println(color.HiWhiteString("Derivatex usage:") +
-		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("create") + " " + color.HiCyanString("[-password=] [-birthdate=] [-user=] [-pin=]") + "\n" + color.HiWhiteString("Create the master password digest needed to generate passwords interactively (safer) and/or with command line flags (riskier due to commands history saved)") +
+		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("create") + " " + color.HiCyanString("[-password=] [-birthdate=] [-user=] [-pin=]") + "\n" + color.HiWhiteString("Create the master password digest needed to generate passwords interactively (safer) and/or with command line flags (riskier due to commands history saved).") +
 		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("generate") + " " + color.HiGreenString("websitename") + " " + color.HiCyanString("[-password=] [-birthdate=] [-user=] [-pin=]") + "\n" + color.HiWhiteString("Generate a password for a particular website name. Optionally set some flags for a more precise password generation.") +
 		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("list") + " " + color.HiCyanString("[-startdate=] [-enddate=] [-user=]") + "\n" + color.HiWhiteString("List all identifications. Optionally set a start date and end date (dd/mm/yyyy) and a specific user.") +
 		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("search") + " " + color.HiGreenString("querystring") + " " + color.HiCyanString("[-websites=true] [-users=true]") + "\n" + color.HiWhiteString("Search identifications containing the query string. Optionally restrict the fields to search in.") +
 		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("delete") + " " + color.HiGreenString("websitename") + " " + color.HiCyanString("[-user=]") + "\n" + color.HiWhiteString("Delete an identifications matching the website name. Optionally set the user in case there are multiple users registered for this website.") +
-		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("dump") + " " + color.HiCyanString("[-tablename="+defaultTableToDump+"] [-outputfilename="+defaultTableToDump+".csv]") + "\n" + color.HiWhiteString("Dump a database table to a CSV file. Optionally set a different table to dump and/or a different output filename"))
+		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("dump") + " " + color.HiCyanString("[-tablename="+defaultTableToDump+"] [-outputfilename="+defaultTableToDump+".csv]") + "\n" + color.HiWhiteString("Dump a database table to a CSV file. Optionally set a different table to dump and/or a different output filename.") +
+		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("help") + "\n" + color.HiWhiteString("Displays this usage message."))
 }
 
 var createFlagSet, generateFlagSet, dumpFlagSet, searchFlagSet, deleteFlagSet, listFlagSet *flag.FlagSet
@@ -138,6 +139,8 @@ func cli(args []string) {
 			dumpCLI(&dumpParams)
 			// TODO fix paths
 		}
+	case "help":
+		displayUsage()
 	default:
 		color.HiRed("Command '" + command + "' not recognized.")
 		displayUsage()
