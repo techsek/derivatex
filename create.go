@@ -23,13 +23,13 @@ func getArgonTimePerRound() int64 {
 	return int64(elapsed.Nanoseconds()/int64(argonTestRounds)) / 1000000
 }
 
-func writeMasterDigest(identifiant string, protection string, masterDigest *[]byte) error {
+func writeMasterDigest(defaultUser string, protection string, masterDigest *[]byte) error {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		return err
 	}
 	var content *[]byte = new([]byte)
-	*content = append(*content, []byte("Default user: "+identifiant+"\n")...)
+	*content = append(*content, []byte("Default user: "+defaultUser+"\n")...)
 	*content = append(*content, []byte("Protection: "+protection+"\n")...)
 	*content = append(*content, []byte("Secret Digest: ")...)
 	*content = append(*content, []byte(base64.StdEncoding.EncodeToString(*masterDigest))...)

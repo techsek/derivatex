@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -69,7 +70,15 @@ func (identification *identificationType) generationParamsEqualTo(other *identif
 		identification.round == other.round &&
 		identification.unallowedCharacters == other.unallowedCharacters &&
 		identification.programVersion == other.programVersion
+}
 
+func (identification *identificationType) isDefault(defaultUser bool) bool {
+	return defaultUser &&
+		identification.passwordLength == defaultPasswordLength &&
+		identification.round == 1 &&
+		identification.unallowedCharacters == "" &&
+		identification.programVersion == version &&
+		identification.note == ""
 }
 
 func findIdentificationsByWebsite(website string) (identifications []identificationType, err error) {
@@ -139,12 +148,19 @@ func insertIdentification(identification identificationType) (err error) {
 	return err
 }
 
-func searchIdentifications(searchString string) (identifications []identificationType, err error) {
+func searchIdentifications(query string, searchWebsites, searchUsers bool) (identifications []identificationType, err error) {
+	var websiteQuery, userQuery string
+	if searchWebsites {
+		websiteQuery = "%" + query + "%"
+	}
+	if searchUsers {
+		userQuery = "%" + query + "%"
+	}
 	statement, err := database.Prepare("SELECT * FROM identifications WHERE website LIKE ? OR user LIKE ?")
 	if err != nil {
 		return nil, err
 	}
-	rows, err := statement.Query("%"+searchString+"%", "%"+searchString+"%")
+	rows, err := statement.Query(websiteQuery, userQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +185,7 @@ func searchIdentifications(searchString string) (identifications []identificatio
 	return identifications, nil
 }
 
-func dumpTable(tableName string) error {
+func dumpTable(tableName string, outputfilename string) error {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		return err
@@ -197,7 +213,7 @@ func dumpTable(tableName string) error {
 		}
 		output += strings.Join(identification.toStrings(), ",") + "\n"
 	}
-	err = ioutil.WriteFile(dir+"/"+tableName+".csv", []byte(output), 0644)
+	err = ioutil.WriteFile(dir+"/"+outputfilename, []byte(output), 0644)
 	return err
 }
 
@@ -210,10 +226,26 @@ func deleteIdentification(website string, user string) (err error) {
 	return err
 }
 
-func getAllIdentifications() (identifications []identificationType, err error) {
-	rows, err := database.Query("SELECT * FROM identifications")
-	if err != nil {
-		return nil, err
+func getAllIdentifications(startTime, endTime int64, user string) (identifications []identificationType, err error) {
+	var rows *sql.Rows
+	if user == "" {
+		statement, err := database.Prepare("SELECT * FROM identifications WHERE creation_time > ? AND creation_time < ?")
+		if err != nil {
+			return nil, err
+		}
+		rows, err = statement.Query(startTime, endTime)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		statement, err := database.Prepare("SELECT * FROM identifications WHERE creation_time > ? AND creation_time < ? AND user = ?")
+		if err != nil {
+			return nil, err
+		}
+		rows, err = statement.Query(startTime, endTime, user)
+		if err != nil {
+			return nil, err
+		}
 	}
 	defer rows.Close()
 	var identification identificationType
@@ -234,4 +266,11 @@ func getAllIdentifications() (identifications []identificationType, err error) {
 		identifications = append(identifications, identification)
 	}
 	return identifications, nil
+}
+
+func displayIdentificationsCLI(identifications []identificationType) {
+	color.HiWhite(strings.Join(identificationTypeLegendStrings(), " | "))
+	for _, identification := range identifications {
+		color.White(strings.Join(identification.toStrings(), " | "))
+	}
 }
