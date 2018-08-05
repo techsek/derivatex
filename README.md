@@ -1,4 +1,4 @@
-# Derivatex
+# derivatex
 
 Smart pseudo-random password generator
 
@@ -52,7 +52,7 @@ The following list of situations goes from most likely to happen to most unlikel
   - **Intervention**: Generate another password for *www.terriblewebsite.com* using the option flag `-round=2` (or more) and change your password on *www.terriblewebsite.com*
 - **Situation**: *Eve* knows your username and tries to bruteforce your account on *www.terriblewebsite.com*
   - **Resistance**: Using default settings (or similar or better), *Eve* will need centuries to bruteforce successfully the password in parallel using GPUs, FPGAs or ASICs
-- **Situation**: *Eve* obtains your *secret_digest.txt*, *database* and *Derivatex* files
+- **Situation**: *Eve* obtains your *secret_digest.txt*, *database* and *derivatex* files
   - **Resistance**: *Eve* can't recover your master password or birthdate (use of Argon2id with demanding resources)
   - **Intervention**: Change your master password completely, and change all your passwords ASAP
 - **Situation**: *Eve* knows your birthdate **and** master password
@@ -64,7 +64,7 @@ The following list of situations goes from most likely to happen to most unlikel
 
 ### Download and installation
 
-Download Derivatex for your platform (TODO)
+Download derivatex for your platform (TODO)
 
 OR
 
@@ -72,19 +72,19 @@ OR
 1. Download and compile the source code from the git repository
 
     ```bash
-    go get -v github.com/qdm12/Derivatex
+    go get -v github.com/qdm12/derivatex
     ```
 
-1. The program `Derivatex` is now built in `$GOPATH/bin`
+1. The program `derivatex` is now built in `$GOPATH/bin`
 
 ### User interface
 
-1. You might want to move the `Derivatex` executable to a safe location, say `/your/safe/path/`
-1. Go to `/your/safe/path/` and double-click on `Derivatex` (TODO)
+1. You might want to move the `derivatex` executable to a safe location, say `/your/safe/path/`
+1. Go to `/your/safe/path/` and double-click on `derivatex` (TODO)
 
 ### Command line interface
 
-1. You might want to move the `Derivatex` executable to a safe location, say `/your/safe/path/`
+1. You might want to move the `derivatex` executable to a safe location, say `/your/safe/path/`
 1. With a terminal, go to `/your/safe/path/`
 
     ```bash
@@ -94,13 +94,13 @@ OR
 1. Create your master digest
 
     ```bash
-    Derivatex create
+    derivatex create
     ```
 
 1. Generate your password for *Instagram* and your default user you have set
 
     ```bash
-    Derivatex generate instagram
+    derivatex generate instagram
     ```
 
 Keep the **secret_digest.txt** file safe as it serves as the seed to the generation of your passwords.
@@ -110,7 +110,7 @@ The file *database* is only used to store information about the password generat
 See more details on how to use it with:
 
 ```bash
-Derivatex help
+derivatex help
 ```
 
 ## TODO

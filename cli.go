@@ -20,7 +20,7 @@ import (
 )
 
 func displayUsage() {
-	fmt.Println(color.HiWhiteString("Derivatex usage:") +
+	fmt.Println(color.HiWhiteString("derivatex usage:") +
 		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("create") + " " + color.HiCyanString("[-password=] [-birthdate=] [-user=] [-pin=]") + "\n" + color.HiWhiteString("Create the master password digest needed to generate passwords interactively (safer) and/or with command line flags (riskier due to commands history saved).") +
 		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("generate") + " " + color.HiGreenString("websitename") + " " + color.HiCyanString("[-password=] [-birthdate=] [-user=] [-pin=] [-qrcode=true] [-clipboard=true] [-passwordonly] [-save=true]") + "\n" + color.HiWhiteString("Generate a password for a particular website name. Optional flags are available for custom password generation.") +
 		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("list") + " " + color.HiCyanString("[-startdate=] [-enddate=] [-user=]") + "\n" + color.HiWhiteString("List all identifications. Optionally set a start date and end date (dd/mm/yyyy) and a specific user.") +
@@ -169,7 +169,7 @@ func createCLI(params *struct {
 	var user string
 	var protection string = "none"
 	if params.masterPassword != "" { // master password provided in argument
-		color.Yellow("Your password was provided as a command line flag, but it is safer to provide it within the interactive command line interface of Derivatex.")
+		color.Yellow("Your password was provided as a command line flag, but it is safer to provide it within the interactive command line interface of derivatex.")
 		masterPassword := []byte(params.masterPassword)
 		safety, message := evaluatePassword(&masterPassword)
 		masterPasswordSHA3 = hashAndDestroy(&masterPassword)
@@ -183,7 +183,7 @@ func createCLI(params *struct {
 		}
 	}
 	if params.birthdate != "" { // birthdate provided in argument
-		color.Yellow("Your birthdate was provided as a command line flag, but it is safer to provide it within the interactive command line interface of Derivatex.")
+		color.Yellow("Your birthdate was provided as a command line flag, but it is safer to provide it within the interactive command line interface of derivatex.")
 		birthdateBytes := []byte(params.birthdate)
 		var birthdate *[]byte = &birthdateBytes
 		if !dateIsValid(birthdate) {
