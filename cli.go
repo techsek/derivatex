@@ -21,13 +21,13 @@ import (
 
 func displayUsage() {
 	fmt.Println(color.HiWhiteString("Derivatex usage:") +
-		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("create") + " " + color.HiCyanString("[-password=] [-birthdate=] [-user=] [-pin=]") + "\n" + color.HiWhiteString("Create the master password digest needed to generate passwords interactively (safer) and/or with command line flags (riskier due to commands history saved).") +
-		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("generate") + " " + color.HiGreenString("websitename") + " " + color.HiCyanString("[-password=] [-birthdate=] [-user=] [-pin=]") + "\n" + color.HiWhiteString("Generate a password for a particular website name. Optionally set some flags for a more precise password generation.") +
-		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("list") + " " + color.HiCyanString("[-startdate=] [-enddate=] [-user=]") + "\n" + color.HiWhiteString("List all identifications. Optionally set a start date and end date (dd/mm/yyyy) and a specific user.") +
-		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("search") + " " + color.HiGreenString("querystring") + " " + color.HiCyanString("[-websites=true] [-users=true]") + "\n" + color.HiWhiteString("Search identifications containing the query string. Optionally restrict the fields to search in.") +
-		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("delete") + " " + color.HiGreenString("websitename") + " " + color.HiCyanString("[-user=]") + "\n" + color.HiWhiteString("Delete an identifications matching the website name. Optionally set the user in case there are multiple users registered for this website.") +
-		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("dump") + " " + color.HiCyanString("[-tablename="+defaultTableToDump+"] [-outputfilename="+defaultTableToDump+".csv]") + "\n" + color.HiWhiteString("Dump a database table to a CSV file. Optionally set a different table to dump and/or a different output filename.") +
-		"\n\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("help") + "\n" + color.HiWhiteString("Displays this usage message."))
+		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("create") + " " + color.HiCyanString("[-password=] [-birthdate=] [-user=] [-pin=]") + "\n" + color.HiWhiteString("Create the master password digest needed to generate passwords interactively (safer) and/or with command line flags (riskier due to commands history saved).") +
+		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("generate") + " " + color.HiGreenString("websitename") + " " + color.HiCyanString("[-password=] [-birthdate=] [-user=] [-pin=] [-qrcode=true] [-clipboard=true] [-passwordonly] [-save=true]") + "\n" + color.HiWhiteString("Generate a password for a particular website name. Optional flags are available for custom password generation.") +
+		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("list") + " " + color.HiCyanString("[-startdate=] [-enddate=] [-user=]") + "\n" + color.HiWhiteString("List all identifications. Optionally set a start date and end date (dd/mm/yyyy) and a specific user.") +
+		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("search") + " " + color.HiGreenString("querystring") + " " + color.HiCyanString("[-websites=true] [-users=true]") + "\n" + color.HiWhiteString("Search identifications containing the query string. Optionally restrict the fields to search in.") +
+		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("delete") + " " + color.HiGreenString("websitename") + " " + color.HiCyanString("[-user=]") + "\n" + color.HiWhiteString("Delete an identifications matching the website name. Optionally set the user in case there are multiple users registered for this website.") +
+		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("dump") + " " + color.HiCyanString("[-tablename="+defaultTableToDump+"] [-outputfilename="+defaultTableToDump+".csv]") + "\n" + color.HiWhiteString("Dump a database table to a CSV file. Optionally set a different table to dump and/or a different output filename.") +
+		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("help") + "\n" + color.HiWhiteString("Displays this usage message."))
 }
 
 var createFlagSet, generateFlagSet, dumpFlagSet, searchFlagSet, deleteFlagSet, listFlagSet *flag.FlagSet
@@ -69,6 +69,10 @@ func cli(args []string) {
 			excludedCharacters                          string
 			noSymbol, noDigit, noUppercase, noLowercase bool
 			pinCode                                     string
+			qrcode                                      bool
+			clipboard                                   bool
+			passwordOnly                                bool
+			save                                        bool
 		}
 		generateFlagSet.IntVar(&generateParams.passwordLength, "length", defaultPasswordLength, "Length of the derived password")
 		generateFlagSet.StringVar(&generateParams.user, "user", "", "Email, username or phone number the password is to be used with")
@@ -80,6 +84,10 @@ func cli(args []string) {
 		generateFlagSet.StringVar(&generateParams.excludedCharacters, "exclude", "", "Characters to exclude from the final password")
 		generateFlagSet.StringVar(&generateParams.note, "note", "", "Extra personal note you want to add")
 		generateFlagSet.StringVar(&generateParams.pinCode, "pin", "", "4 digits pin code in case the secret digest is encrypted")
+		generateFlagSet.BoolVar(&generateParams.qrcode, "qr", true, "Display the resulting password as a QR code")
+		generateFlagSet.BoolVar(&generateParams.clipboard, "clipboard", true, "Copy the resulting password to the clipboard")
+		generateFlagSet.BoolVar(&generateParams.passwordOnly, "passwordonly", false, "Only display the resulting password (for piping)")
+		generateFlagSet.BoolVar(&generateParams.save, "save", true, "Save the password generation settings and corresponding user to the database")
 		generateFlagSet.Parse(args[2:])
 		if generateFlagSet.Parsed() {
 			generateCLI(args[1], &generateParams)
@@ -389,6 +397,10 @@ func generateCLI(website string, params *struct {
 	noUppercase        bool
 	noLowercase        bool
 	pinCode            string
+	qrcode             bool
+	clipboard          bool
+	passwordOnly       bool
+	save               bool
 }) {
 	unallowedCharacters := buildUnallowedCharacters(params.noSymbol, params.noDigit, params.noUppercase, params.noLowercase, params.excludedCharacters)
 	if !unallowedCharacters.isAnythingAllowed() {
@@ -460,11 +472,16 @@ func generateCLI(website string, params *struct {
 					color.HiWhite("You are trying to create a password with the following identification:")
 					color.White(strings.Join(identificationTypeLegendStrings(), " | "))
 					color.White(strings.Join(newIdentification.toStrings(), " | "))
-					continueGenerate := readInput("Replace the old identification? (yes/no) [no]: ")
-					if continueGenerate != "yes" {
-						return
+					for {
+						replaceOrOld := readInput("Replace the old identification or generate using the old identification? (replace/old) [old]: ")
+						if replaceOrOld == "replace" {
+							replaceidentification = true
+							break
+						} else if replaceOrOld == "old" || replaceOrOld == "" {
+							break
+						}
+						color.Yellow("Choice '" + replaceOrOld + "' is not a valid. Please try again")
 					}
-					replaceidentification = true
 				} else { // same identification as stored in database
 					newIdentification.creationTime = identifications[i].creationTime
 				}
@@ -477,13 +494,15 @@ func generateCLI(website string, params *struct {
 				newIdentification = identifications[0]
 			} else {
 				color.HiWhite("Password(s) for the following identification(s) have already been generated previously:")
-				color.White(strings.Join(identificationTypeLegendStrings(), " | "))
-				for i := range identifications {
-					color.White(strings.Join(identifications[i].toStrings(), " | "))
-				}
-				continueGenerate := readInput("Generate a password for '" + website + "' and new user '" + user + "'? (yes/no) [no]: ")
-				if continueGenerate != "yes" {
-					return
+				displayIdentificationsCLI(identifications)
+				for {
+					continueGenerate := readInput("Generate a password for '" + website + "' and new user '" + user + "'? (yes/no) [no]: ")
+					if continueGenerate == "yes" {
+						break
+					} else if continueGenerate == "no" || continueGenerate == "" {
+						return
+					}
+					color.Yellow("Choice '" + continueGenerate + "' is not a valid. Please try again")
 				}
 			}
 		}
@@ -526,28 +545,38 @@ func generateCLI(website string, params *struct {
 
 	password := determinePassword(masterDigest, []byte(website), newIdentification.passwordLength, newIdentification.round, unallowedCharacters)
 
-	// TODO transaction
-	if replaceidentification {
-		err := deleteIdentification(newIdentification.website, newIdentification.user)
-		if err != nil {
-			color.HiRed("Error deleting the identification: " + err.Error())
-			return
+	if params.save {
+		// TODO transaction
+		if replaceidentification {
+			err := deleteIdentification(newIdentification.website, newIdentification.user)
+			if err != nil {
+				color.HiRed("Error deleting the identification: " + err.Error())
+				return
+			}
 		}
+		insertIdentification(newIdentification)
 	}
-	insertIdentification(newIdentification)
-	color.HiGreen("Password QR Code:")
-	config := qrterminal.Config{
-		Level:     qrterminal.M,
-		Writer:    os.Stdout,
-		BlackChar: qrterminal.WHITE,
-		WhiteChar: qrterminal.BLACK,
-		QuietZone: 1,
+	if params.passwordOnly {
+		fmt.Print(password)
+		return
 	}
-	qrterminal.GenerateWithConfig(password, config)
+	if params.qrcode {
+		color.HiGreen("Password QR Code:")
+		config := qrterminal.Config{
+			Level:     qrterminal.M,
+			Writer:    os.Stdout,
+			BlackChar: qrterminal.WHITE,
+			WhiteChar: qrterminal.BLACK,
+			QuietZone: 1,
+		}
+		qrterminal.GenerateWithConfig(password, config)
+	}
 	fmt.Println(color.HiGreenString("User: ") + color.HiWhiteString(newIdentification.user))
 	fmt.Println(color.HiGreenString("Password: ") + color.HiWhiteString(password))
-	clipboard.WriteAll(password)
-	color.HiGreen("Password copied to clipboard")
+	if params.clipboard {
+		clipboard.WriteAll(password)
+		color.HiGreen("Password copied to clipboard")
+	}
 }
 
 func listCLI(params *struct {
