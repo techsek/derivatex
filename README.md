@@ -25,7 +25,14 @@ Smart pseudo-random password generator
 
 ## Scheme overview
 
-TODO
+![Derivatex diagram](readme/derivatex.svg)
+
+*A few notes*:
+
+- Sign up and log in procedures both require the generation of a password
+- Passwords are not saved and only rely on `secret_digest.txt`, you should not save the generated passwords
+- The SQLite database is stored in the local file `database`
+- The database is used to check for existing records and modify them if necessary
 
 ## Other security aspects
 
@@ -64,9 +71,9 @@ OR
 1. Install [Golang](https://golang.org/dl/)
 1. Download and compile the source code from the git repository
 
-  ```bash
-  go get -v github.com/qdm12/Derivatex
-  ```
+    ```bash
+    go get -v github.com/qdm12/Derivatex
+    ```
 
 1. The program `Derivatex` is now built in `$GOPATH/bin`
 
@@ -80,21 +87,21 @@ OR
 1. You might want to move the `Derivatex` executable to a safe location, say `/your/safe/path/`
 1. With a terminal, go to `/your/safe/path/`
 
-  ```bash
-  cd /your/safe/path/
-  ```
+    ```bash
+    cd /your/safe/path/
+    ```
 
 1. Create your master digest
 
-  ```bash
-  Derivatex create
-  ```
+    ```bash
+    Derivatex create
+    ```
 
 1. Generate your password for *Instagram* and your default user you have set
 
-  ```bash
-  Derivatex generate instagram
-  ```
+    ```bash
+    Derivatex generate instagram
+    ```
 
 Keep the **secret_digest.txt** file safe as it serves as the seed to the generation of your passwords.
 
@@ -116,9 +123,9 @@ Derivatex help
 1. Generate seed words (i.e. 12 words for cardano)
 1. Calculate entropy of final password
 1. Preferences file
-  - Default search Exlusive or not
-  - Smaller QR code
-  - CSV separator
+    - Default search Exlusive or not
+    - Smaller QR code
+    - CSV separator
 
 ## Details
 
