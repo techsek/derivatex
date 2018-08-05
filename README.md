@@ -115,8 +115,8 @@ Derivatex help
 
 ## TODO
 
-1. Finish readme diagram
 1. Fix working on a different drive
+1. UI for desktop
 1. Unit testing to finish
 1. Yubikeys / Google Authnticator
 1. Generate private keys i.e. RSA
@@ -173,7 +173,7 @@ Derivatex help
 ## For the security paranoids
 
 - Compile the code with different parameters
-- Compile with Docker
+- Compile with Docker, run with Docker
 - Do not disclose what program you are using
 - Scan the QR code from an offline device
 
