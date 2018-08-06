@@ -81,11 +81,7 @@ The following list of situations goes from most likely to happen to most unlikel
 
 #### Build from source
 
-1. Install [dep](https://golang.github.io/dep/) for dependency management:
-
-    ```bash
-    brew install dep
-    ```
+1. Install [dep](https://golang.github.io/dep/docs/installation.html) for dependency management.
 
 2. Clone this project onto your `$GOPATH`:
 
