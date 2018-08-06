@@ -16,3 +16,7 @@
 *.csv
 old
 database
+
+# Remnants of building project with dep (https://golang.github.io/dep/)
+vendor/
+derivatex
