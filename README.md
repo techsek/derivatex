@@ -2,7 +2,52 @@
 
 Smart pseudo-random password generator
 
+*Stable and will stay backward compatible*
+
 **Keep your SECRET_DIGEST.TXT and DATABASE files safe !!!**
+
+## TO DOs
+
+### Documentation
+
+- [ ] Add Github Markdown badges to readme
+- [ ] Add diagram to explain how to generate passwords for signup and login
+- [ ] Make logo, maybe with ASCII art?
+
+### Security and architecture
+
+- [ ] Write more unit tests
+- [ ] Yubikeys / Google Authenticator locally?
+- [ ] **Banana Split**: New architecture to revoke the secret digest
+  - [ ] Server side
+    - [ ] Docker container
+    - [ ] Client communication / router
+    - [ ] Yubikeys / Google Authenticator
+  - [ ] Client side
+    - [ ] Communicate with server at create and generate stages
+  - [ ] Store database on server?
+
+### CLI
+
+- [ ] Flag to choose the CSV separator when dumping a table
+- [ ] Fix different drive paths on Windows platform
+- [ ] Generate SSH keys
+- [ ] Make search command work with multiple words separated by space
+- [ ] Generate seed words (i.e. 12 words for cardano)
+- [ ] Calculate and display entropy of final password
+- [ ] Preferences file
+  - [ ] Default search: Exlusive or not
+  - [ ] Size of ASCII QR code
+
+### UI
+
+- [ ] Computer UI
+- [ ] Mobile UI once *Banana Split* is finished
+
+### Distribution
+
+- [ ] Pre-built binaries for all computer platforms (not mobile)
+- [ ] Docker image for the CLI
 
 ## Features overview
 
@@ -64,33 +109,28 @@ The following list of situations goes from most likely to happen to most unlikel
 
 ### Download and installation
 
-#### Download derivatex for your platform
-
-(TODO)
-
 #### Install using `go get`
 
 1. Install [Golang](https://golang.org/dl/)
-2. Download and compile the source code from the git repository
+1. Download and compile the source code from the git repository
 
     ```bash
     go get -v github.com/qdm12/derivatex
     ```
 
-3. The program `derivatex` is now built in `$GOPATH/bin`
+1. The program `derivatex` is now built in `$GOPATH/bin` (or `%GOPATH%/bin` on Windows platforms)
 
 #### Build from source
 
-1. Install [dep](https://golang.github.io/dep/docs/installation.html) for dependency management.
-
-2. Clone this project onto your `$GOPATH`:
+1. Install [Golang](https://golang.org/dl/)
+1. Install [dep](https://golang.github.io/dep/docs/installation.html) for dependency management
+1. Clone the github repository in your `$GOPATH`
 
     ```bash
-    git clone https://github.com/qdm12/derivatex.git \
-    $GOPATH/src/github.com/derivatex
+    git clone https://github.com/qdm12/derivatex.git $GOPATH/src/github.com/derivatex
     ```
 
-3. Then build it:
+1. Build derivatex
 
     ```bash
     cd $GOPATH/src/github.com/derivatex
@@ -98,15 +138,17 @@ The following list of situations goes from most likely to happen to most unlikel
     go build
     ```
 
-### User interface
+*For the security paranoids...*
 
-1. You might want to move the `derivatex` executable to a safe location, say `/your/safe/path/`
-1. Go to `/your/safe/path/` and double-click on `derivatex` (TODO)
+- Compile the code with different parameters, see [*params.go*](params.go)
+- Compile with Docker and run with Docker
+- Do not disclose what program you are using
+- Scan the QR code from an offline device i.e. a Raspberry Pi
 
 ### Command line interface
 
 1. You might want to move the `derivatex` executable to a safe location, say `/your/safe/path/`
-1. With a terminal, go to `/your/safe/path/`
+1. Go to `/your/safe/path/`
 
     ```bash
     cd /your/safe/path/
@@ -118,7 +160,7 @@ The following list of situations goes from most likely to happen to most unlikel
     derivatex create
     ```
 
-1. Generate your password for *Instagram* and your default user you have set
+1. Generate your password for *Instagram* and for your default user you have previously set
 
     ```bash
     derivatex generate instagram
@@ -128,25 +170,11 @@ Keep the **secret_digest.txt** file safe as it serves as the seed to the generat
 
 The file *database* is only used to store information about the password generation and is not very sensitive, although it is better to keep it safe.
 
-See more details on how to use it with:
+See more details on how to use derivatex with:
 
 ```bash
 derivatex help
 ```
-
-## TODO
-
-1. Fix working on a different drive
-1. UI for desktop
-1. Unit testing to finish
-1. Yubikeys / Google Authnticator
-1. Generate private keys i.e. RSA
-1. Generate seed words (i.e. 12 words for cardano)
-1. Calculate entropy of final password
-1. Preferences file
-    - Default search Exlusive or not
-    - Smaller QR code
-    - CSV separator
 
 ## Details
 
@@ -190,13 +218,6 @@ derivatex help
 - The database content can be listed entirely or partially
 - Records can be deleted from the database
 - A table from the database can be dumped to a CSV file
-
-## For the security paranoids
-
-- Compile the code with different parameters
-- Compile with Docker, run with Docker
-- Do not disclose what program you are using
-- Scan the QR code from an offline device
 
 ## Inspiration
 
