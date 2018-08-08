@@ -12,7 +12,7 @@ const defaultPasswordLength = 20
 const databaseFilename = "database"
 const defaultTableToDump = "identifications"
 
-const version = 1
+const version = 2
 
 const (
 	symbols    = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"

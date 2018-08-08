@@ -114,10 +114,11 @@ func byteAsciiType(b byte) asciiType {
 	return asciiOther
 }
 
-func determinePassword(masterDigest *[]byte, websiteName []byte, passwordLength uint8, round uint16, unallowedCharacters unallowedCharactersType) string {
+func determinePassword(masterDigest *[]byte, websiteName []byte, user []byte, passwordLength uint8, round uint16, unallowedCharacters unallowedCharactersType) string {
 	// Hashes masterDigest+websiteName to obtain an initial
 	input := new([]byte)
 	*input = append(*masterDigest, websiteName...)
+	*input = append(*input, user...)
 	digest := hashAndDestroy(input) // 32 ASCII characters
 	// Rounds of password (to renew password, in example)
 	var digestSlicePtr *[]byte = new([]byte)

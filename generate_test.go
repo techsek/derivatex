@@ -166,6 +166,7 @@ func Test_determinePassword(t *testing.T) {
 	cases := []struct {
 		masterDigest        []byte
 		websiteName         []byte
+		user                []byte
 		passwordLength      uint8
 		round               uint16
 		unallowedCharacters unallowedCharactersType
@@ -174,6 +175,7 @@ func Test_determinePassword(t *testing.T) {
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
+			[]byte(""),
 			0,
 			1,
 			unallowedCharactersType{},
@@ -182,6 +184,7 @@ func Test_determinePassword(t *testing.T) {
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
+			[]byte(""),
 			2,
 			1,
 			unallowedCharactersType{},
@@ -190,6 +193,7 @@ func Test_determinePassword(t *testing.T) {
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
+			[]byte(""),
 			4,
 			1,
 			unallowedCharactersType{},
@@ -198,6 +202,7 @@ func Test_determinePassword(t *testing.T) {
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
+			[]byte(""),
 			10,
 			1,
 			unallowedCharactersType{},
@@ -206,6 +211,7 @@ func Test_determinePassword(t *testing.T) {
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("facebook"),
+			[]byte(""),
 			10,
 			1,
 			unallowedCharactersType{},
@@ -214,6 +220,7 @@ func Test_determinePassword(t *testing.T) {
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
+			[]byte(""),
 			50,
 			1,
 			unallowedCharactersType{},
@@ -222,6 +229,7 @@ func Test_determinePassword(t *testing.T) {
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
+			[]byte(""),
 			10,
 			1,
 			buildUnallowedCharacters(false, false, true, true, ""),
@@ -230,14 +238,33 @@ func Test_determinePassword(t *testing.T) {
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
+			[]byte(""),
 			10,
 			1,
 			buildUnallowedCharacters(true, false, false, false, ""),
 			`j3nlfCL08L`,
 		},
+		{
+			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
+			[]byte("google"),
+			[]byte("a@b.com"),
+			50,
+			1,
+			unallowedCharactersType{},
+			`uT6AA,;l_bYe..5ly]4|n0g\D1tST39q4W!vH18E-?VuP78:iK`,
+		},
+		{
+			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
+			[]byte("google"),
+			[]byte("b@b.com"),
+			50,
+			1,
+			unallowedCharactersType{},
+			`G;we2320ABKq2A12bD"w}XjS38J'jH~=tyI0gyj>#3oX:]8(}V`,
+		},
 	}
 	for _, c := range cases {
-		out := determinePassword(&c.masterDigest, c.websiteName, c.passwordLength, c.round, c.unallowedCharacters)
+		out := determinePassword(&c.masterDigest, c.websiteName, c.user, c.passwordLength, c.round, c.unallowedCharacters)
 		if out != c.password {
 			t.Errorf("byteAsciiType(%v, %s, %d) == %s want %s", c.masterDigest, string(c.websiteName), c.passwordLength, out, c.password)
 		}

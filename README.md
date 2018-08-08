@@ -167,7 +167,7 @@ derivatex help
 - Fast, deterministic and resistant to bruteforce attacks
 - Pseudo randomn permutations by using rand.Seed with different source data
 - Final password is obtained by:
-  - SHA3_256(secretDigest+name)
+  - SHA3_256(secretDigest+website name+user)
   - Forcing the first 4 bytes (or less) to be in a pseudo-random order:
     - ASCII lowercase letter
     - ASCII uppercase letter

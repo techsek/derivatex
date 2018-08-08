@@ -22,7 +22,7 @@ import (
 func displayUsage() {
 	fmt.Println(color.HiWhiteString("derivatex usage:") +
 		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("create") + " " + color.HiCyanString("[-password=] [-birthdate=] [-user=] [-pin=]") + "\n" + color.HiWhiteString("Create the master password digest needed to generate passwords interactively (safer) and/or with command line flags (riskier due to commands history saved).") +
-		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("generate") + " " + color.HiGreenString("websitename") + " " + color.HiCyanString("[-password=] [-birthdate=] [-user=] [-pin=] [-qrcode=true] [-clipboard=true] [-passwordonly] [-save=true]") + "\n" + color.HiWhiteString("Generate a password for a particular website name. Optional flags are available for custom password generation.") +
+		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("generate") + " " + color.HiGreenString("websitename") + " " + color.HiCyanString("[-length="+strconv.FormatInt(defaultPasswordLength, 10)+"] [-birthdate=] [-user=] [-pin=] [-qrcode=true] [-clipboard=true] [-passwordonly] [-save=true] [-version="+strconv.FormatInt(version, 10)+"]") + "\n" + color.HiWhiteString("Generate a password for a particular website name. Optional flags are available for custom password generation.") +
 		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("list") + " " + color.HiCyanString("[-startdate=] [-enddate=] [-user=]") + "\n" + color.HiWhiteString("List all identifications. Optionally set a start date and end date (dd/mm/yyyy) and a specific user.") +
 		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("search") + " " + color.HiGreenString("querystring") + " " + color.HiCyanString("[-websites=true] [-users=true]") + "\n" + color.HiWhiteString("Search identifications containing the query string. Optionally restrict the fields to search in.") +
 		"\n" + color.WhiteString("derivatex") + " " + color.HiBlueString("delete") + " " + color.HiGreenString("websitename") + " " + color.HiCyanString("[-user=]") + "\n" + color.HiWhiteString("Delete an identifications matching the website name. Optionally set the user in case there are multiple users registered for this website.") +
@@ -73,6 +73,7 @@ func cli(args []string) {
 			clipboard                                   bool
 			passwordOnly                                bool
 			save                                        bool
+			programVersion                              int
 		}
 		generateFlagSet.IntVar(&generateParams.passwordLength, "length", defaultPasswordLength, "Length of the derived password")
 		generateFlagSet.StringVar(&generateParams.user, "user", "", "Email, username or phone number the password is to be used with")
@@ -88,6 +89,7 @@ func cli(args []string) {
 		generateFlagSet.BoolVar(&generateParams.clipboard, "clipboard", true, "Copy the resulting password to the clipboard")
 		generateFlagSet.BoolVar(&generateParams.passwordOnly, "passwordonly", false, "Only display the resulting password (for piping)")
 		generateFlagSet.BoolVar(&generateParams.save, "save", true, "Save the password generation settings and corresponding user to the database")
+		generateFlagSet.IntVar(&generateParams.programVersion, "version", version, "Version of the core password generation code to be used")
 		generateFlagSet.Parse(args[2:])
 		if generateFlagSet.Parsed() {
 			generateCLI(args[1], &generateParams)
@@ -401,6 +403,7 @@ func generateCLI(website string, params *struct {
 	clipboard          bool
 	passwordOnly       bool
 	save               bool
+	programVersion     int
 }) {
 	unallowedCharacters := buildUnallowedCharacters(params.noSymbol, params.noDigit, params.noUppercase, params.noLowercase, params.excludedCharacters)
 	if !unallowedCharacters.isAnythingAllowed() {
@@ -451,7 +454,7 @@ func generateCLI(website string, params *struct {
 		round:               uint16(params.round),
 		unallowedCharacters: unallowedCharacters.serialize(),
 		creationTime:        time.Now().Unix(), // set to previous database record if a record is found
-		programVersion:      version,
+		programVersion:      uint16(params.programVersion),
 		note:                params.note,
 	}
 	identifications, err := findIdentificationsByWebsite(website)
@@ -459,13 +462,15 @@ func generateCLI(website string, params *struct {
 		color.HiRed("Error reading the database file '" + databaseFilename + "' (" + err.Error() + ")")
 		return
 	}
-	var replaceidentification bool
+	var replaceIdentification bool
 	if len(identifications) > 0 {
 		var identificationExists bool
 		for i := range identifications {
 			if newIdentification.user == identifications[i].user { // identification already exists in database
 				identificationExists = true
-				if !identifications[i].generationParamsEqualTo(&newIdentification) {
+				if identifications[i].generationParamsEqualTo(&newIdentification) {
+					newIdentification.creationTime = identifications[i].creationTime
+				} else {
 					color.HiWhite("A password for the following identification has already been generated previously:")
 					color.White(strings.Join(identificationTypeLegendStrings(), " | "))
 					color.White(strings.Join(identifications[i].toStrings(), " | "))
@@ -475,15 +480,14 @@ func generateCLI(website string, params *struct {
 					for {
 						replaceOrOld := readInput("Replace the old identification or generate using the old identification? (replace/old) [old]: ")
 						if replaceOrOld == "replace" {
-							replaceidentification = true
+							replaceIdentification = true
 							break
 						} else if replaceOrOld == "old" || replaceOrOld == "" {
+							newIdentification = identifications[i]
 							break
 						}
 						color.Yellow("Choice '" + replaceOrOld + "' is not a valid. Please try again")
 					}
-				} else { // same identification as stored in database
-					newIdentification.creationTime = identifications[i].creationTime
 				}
 				break
 			}
@@ -543,11 +547,16 @@ func generateCLI(website string, params *struct {
 	}
 	params.pinCode = ""
 
-	password := determinePassword(masterDigest, []byte(website), newIdentification.passwordLength, newIdentification.round, unallowedCharacters)
+	var password string
+	if newIdentification.programVersion == 1 {
+		password = determinePassword(masterDigest, []byte(website), []byte{}, newIdentification.passwordLength, newIdentification.round, unallowedCharacters)
+	} else {
+		password = determinePassword(masterDigest, []byte(website), []byte(user), newIdentification.passwordLength, newIdentification.round, unallowedCharacters)
+	}
 
 	if params.save {
 		// TODO transaction
-		if replaceidentification {
+		if replaceIdentification {
 			err := deleteIdentification(newIdentification.website, newIdentification.user)
 			if err != nil {
 				color.HiRed("Error deleting the identification: " + err.Error())
