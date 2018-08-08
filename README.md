@@ -85,15 +85,15 @@ The following list of situations goes from most likely to happen to most unlikel
 
 2. Clone this project onto your `$GOPATH`:
 
-    ``` bash
+    ```bash
     git clone https://github.com/qdm12/derivatex.git \
     $GOPATH/src/github.com/derivatex
     ```
 
 3. Then build it:
 
-    ``` bash
-    cd $GOPATH/github.com/derivatex
+    ```bash
+    cd $GOPATH/src/github.com/derivatex
     dep ensure
     go build
     ```
@@ -101,24 +101,24 @@ The following list of situations goes from most likely to happen to most unlikel
 ### User interface
 
 1. You might want to move the `derivatex` executable to a safe location, say `/your/safe/path/`
-2. Go to `/your/safe/path/` and double-click on `derivatex` (TODO)
+1. Go to `/your/safe/path/` and double-click on `derivatex` (TODO)
 
 ### Command line interface
 
 1. You might want to move the `derivatex` executable to a safe location, say `/your/safe/path/`
-2. With a terminal, go to `/your/safe/path/`
+1. With a terminal, go to `/your/safe/path/`
 
     ```bash
     cd /your/safe/path/
     ```
 
-3. Create your master digest
+1. Create your master digest
 
     ```bash
     derivatex create
     ```
 
-4. Generate your password for *Instagram* and your default user you have set
+1. Generate your password for *Instagram* and your default user you have set
 
     ```bash
     derivatex generate instagram
@@ -137,13 +137,13 @@ derivatex help
 ## TODO
 
 1. Fix working on a different drive
-2. UI for desktop
-3. Unit testing to finish
-4. Yubikeys / Google Authnticator
-5. Generate private keys i.e. RSA
-6. Generate seed words (i.e. 12 words for cardano)
-7. Calculate entropy of final password
-8. Preferences file
+1. UI for desktop
+1. Unit testing to finish
+1. Yubikeys / Google Authnticator
+1. Generate private keys i.e. RSA
+1. Generate seed words (i.e. 12 words for cardano)
+1. Calculate entropy of final password
+1. Preferences file
     - Default search Exlusive or not
     - Smaller QR code
     - CSV separator
