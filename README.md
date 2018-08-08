@@ -64,18 +64,39 @@ The following list of situations goes from most likely to happen to most unlikel
 
 ### Download and installation
 
-Download derivatex for your platform (TODO)
+#### Download derivatex for your platform
 
-OR
+(TODO)
+
+#### Install using `go get`
 
 1. Install [Golang](https://golang.org/dl/)
-1. Download and compile the source code from the git repository
+2. Download and compile the source code from the git repository
 
     ```bash
     go get -v github.com/qdm12/derivatex
     ```
 
-1. The program `derivatex` is now built in `$GOPATH/bin`
+3. The program `derivatex` is now built in `$GOPATH/bin`
+
+#### Build from source
+
+1. Install [dep](https://golang.github.io/dep/docs/installation.html) for dependency management.
+
+2. Clone this project onto your `$GOPATH`:
+
+    ```bash
+    git clone https://github.com/qdm12/derivatex.git \
+    $GOPATH/src/github.com/derivatex
+    ```
+
+3. Then build it:
+
+    ```bash
+    cd $GOPATH/src/github.com/derivatex
+    dep ensure
+    go build
+    ```
 
 ### User interface
 
