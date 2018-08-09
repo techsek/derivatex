@@ -105,7 +105,7 @@ func Test_byteAsciiType(t *testing.T) {
 		},
 	}
 	for _, c := range cases {
-		out := byteAsciiType(c.b)
+		out := byteASCIIType(c.b)
 		if out != c.t {
 			t.Errorf("byteAsciiType(%v) == %v want %v", c.b, out, c.t)
 		}
@@ -116,7 +116,7 @@ func Test_shuffleAsciiOrder(t *testing.T) {
 	cases := []struct {
 		asciiOrder         []asciiType
 		randSource         rand.Source
-		shuffledAsciiOrder []asciiType
+		shuffledASCIIOrder []asciiType
 	}{
 		{
 			[]asciiType{asciiLowercase},
@@ -155,9 +155,9 @@ func Test_shuffleAsciiOrder(t *testing.T) {
 		},
 	}
 	for _, c := range cases {
-		shuffleAsciiOrder(&c.asciiOrder, c.randSource)
-		if !reflect.DeepEqual(c.asciiOrder, c.shuffledAsciiOrder) {
-			t.Errorf("shuffleAsciiOrder(&c.asciiOrder, c.randSource) == %v want %v", c.asciiOrder, c.shuffledAsciiOrder)
+		shuffleASCIIOrder(&c.asciiOrder, c.randSource)
+		if !reflect.DeepEqual(c.asciiOrder, c.shuffledASCIIOrder) {
+			t.Errorf("shuffleAsciiOrder(&c.asciiOrder, c.randSource) == %v want %v", c.asciiOrder, c.shuffledASCIIOrder)
 		}
 	}
 }

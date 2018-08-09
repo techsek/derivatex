@@ -28,7 +28,7 @@ func writeMasterDigest(defaultUser string, protection string, masterDigest *[]by
 	if err != nil {
 		return err
 	}
-	var content *[]byte = new([]byte)
+	var content = new([]byte)
 	*content = append(*content, []byte("Default user: "+defaultUser+"\n")...)
 	*content = append(*content, []byte("Protection: "+protection+"\n")...)
 	*content = append(*content, []byte("Secret Digest: ")...)
