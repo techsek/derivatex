@@ -10,30 +10,53 @@ Smart pseudo-random password generator
 
 ### Documentation
 
-- [ ] Add Github Markdown badges to readme
+- [ ] Diagram on Banana Split
+- [ ] Donation button
+  - [ ] Bitcoin
+  - [ ] Ethereum
+  - [ ] Ada (haha)
+  - [ ] Paypal
 - [ ] Add diagram to explain how to generate passwords for signup and login
 - [ ] Make logo, maybe with ASCII art?
+- [ ] Add Github Markdown badges to readme
+  - [ ] Travis CI build
+  - [ ] Unit testing code coverage
+  - [ ] Docker hub build / Travis docker build
+  - [ ] Last commit
+  - [ ] Commit activity
+  - [ ] Issues
+  - [ ] Docker pulls
+  - [ ] Docker stars
+  - [ ] Docker build automated
+  - [ ] Docker image size and layers
+  - [ ] Version
+- [ ] Roadmap
+- [ ] Github wiki
+  - [ ] CLI
 
 ### Security and architecture
 
-- [ ] Write more unit tests
 - [ ] Yubikeys / Google Authenticator locally?
+- [ ] *LATER* Write more unit tests
 - [ ] **Banana Split**: New architecture to revoke the secret digest
   - [ ] Server side
-    - [ ] Docker container
+    - [ ] C++ bindings to [Palisade](https://git.njit.edu/palisade/PALISADE/wikis/Use-The-Library)
+    - [ ] Store half of secret digest on blockchain?
     - [ ] Client communication / router
     - [ ] Yubikeys / Google Authenticator
+    - [ ] Docker container
   - [ ] Client side
     - [ ] Communicate with server at create and generate stages
   - [ ] Store database on server?
 
 ### CLI
 
-- [ ] Flag to choose the CSV separator when dumping a table
+- [ ] Yubikeys / Google Authenticator
 - [ ] Fix different drive paths on Windows platform
-- [ ] Generate SSH keys
+- [ ] Flag to choose the CSV separator when dumping a table
 - [ ] Make search command work with multiple words separated by space
 - [ ] Generate seed words (i.e. 12 words for cardano)
+- [ ] Generate SSH keys
 - [ ] Calculate and display entropy of final password
 - [ ] Preferences file
   - [ ] Default search: Exlusive or not
