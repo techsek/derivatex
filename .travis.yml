@@ -1,0 +1,29 @@
+language: go
+sudo: false
+go:
+  - "1.10.3"
+
+before_install:
+  - go get github.com/mitchellh/gox
+
+script:
+  - go get -t -v ./...
+  - diff -u <(echo -n) <(gofmt -d .)
+  - go vet $(go list ./... | grep -v /vendor/)
+  - go test -v -race ./...
+  - gox -os="linux darwin windows" -arch="amd64" -output="{{.Dir}}-${TRAVIS_TAG}_{{.OS}}_{{.Arch}}" -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...;
+  - tar -cvzf derivatex-${TRAVIS_TAG}_darwin_amd64.tar.gz derivatex-${TRAVIS_TAG}_darwin_amd64
+  - tar -cvzf derivatex-${TRAVIS_TAG}_linux_amd64.tar.gz derivatex-${TRAVIS_TAG}_linux_amd64
+
+deploy:
+  skip_cleanup: true
+  provider: releases
+  api_key:
+    secure: GlqmK/a/yjvqt5zHaoP19Dw96h7l68vn0kjCLUViIxBJ59cFbNV6W4M9lAq8CZy+uG3NNp8ujhFM+z94pfAhj1GVcN3BjUwyaPI2B/5a2m7WNc3PB7FILQqaYMnINWKGs8TLYeIULBa8ANtbvta7MezSYVQcPuMKOyCDoez4tTojGwehtQECPNil6KnXd7ouVZ+PyMov7TkiSf36GbE65O80srXtlKoLhXH18jyXtS4D03u0F68U2EAiwHHRdFxA8j7dwtg5UtpXXL6t4afJh6ZOlW3o4GVvT3UHYt3efAcumSuUor0PY56CXPPL08LqzyBT8j6cJK260RleEDjLogiboA/xa3sL1B7BtcX8LpbcgEx+f/p6doExtkfzwNdJ+vcyWcbXVjCwAa69EkHYkBz1xqiHA+w7scs3aYaYrZ0ukDo0rIxAy0TnFcnU73rTyk4cpxlUyDwsJCUK5zm8EO5eMm/GFV732gsngKLPaQU9sJKBeN7Lvd87Jzdgf+qzW2uNaBhLpzCINF0y8+HJcaIOlhxbd86UgnCsTE+E9+e3pk3XKHq7bw98N5GbmwXgwACvF1KXA+jorBXp/STY7blQPlT/xbdUcI5UATgtzuI8I1Ax5IkPYNWDq/D4/rags1FY3TF2ZyD3/nLCpG9eO5ZwttK/7rVP5zTTG5IX5Xo=
+  file:
+    - derivatex-${TRAVIS_TAG}_windows_amd64.exe
+    - derivatex-${TRAVIS_TAG}_darwin_amd64.tar.gz
+    - derivatex-${TRAVIS_TAG}_linux_amd64.tar.gz
+  on:
+    repo: techsek/derivatex
+    tags: true
