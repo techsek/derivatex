@@ -19,7 +19,7 @@ func readMasterDigest() (defaultUser string, protection string, masterDigest *[]
 	if err != nil {
 		return "", "", nil, err
 	}
-	var content *[]byte = new([]byte)
+	var content = new([]byte)
 	defer clearByteSlice(content)
 	*content, err = ioutil.ReadFile(dir + "/" + masterDigestFilename)
 	if err != nil {
@@ -98,7 +98,7 @@ func byteInBounds(b byte, bounds []byteBounds) bool {
 	return false
 }
 
-func byteAsciiType(b byte) asciiType {
+func byteASCIIType(b byte) asciiType {
 	if byteInBounds(b, asciiSymbolBounds) {
 		return asciiSymbol
 	}
@@ -121,13 +121,13 @@ func determinePassword(masterDigest *[]byte, websiteName []byte, user []byte, pa
 	*input = append(*input, user...)
 	digest := hashAndDestroy(input) // 32 ASCII characters
 	// Rounds of password (to renew password, in example)
-	var digestSlicePtr *[]byte = new([]byte)
+	var digestSlicePtr = new([]byte)
 	var k uint16
 	for k = 1; k < round; k++ {
 		*digestSlicePtr = (*digest)[:]
 		digest = hashSHA3_256(digestSlicePtr) // additional SHA3 for more rounds
 	}
-	var password []byte = (*digest)[:]
+	var password = (*digest)[:]
 
 	// Pseudo Random generator initialization
 	randSource := rand.NewSource(int64(binary.BigEndian.Uint64(password)))
@@ -165,32 +165,32 @@ func determinePassword(masterDigest *[]byte, websiteName []byte, user []byte, pa
 		asciiOrder = append(asciiOrder, asciiOrder...)
 	}
 	asciiOrder = asciiOrder[:passwordLength]
-	shuffleAsciiOrder(&asciiOrder, randSource)
+	shuffleASCIIOrder(&asciiOrder, randSource)
 	if len(asciiOrder) > 1 {
 		// Shuffle more to get a lowercase or uppercase as the first character (if possible with flags)
 		if lowercaseAllowed && uppercaseAllowed {
 			for asciiOrder[0] != asciiLowercase && asciiOrder[0] != asciiUppercase {
-				shuffleAsciiOrder(&asciiOrder, randSource)
+				shuffleASCIIOrder(&asciiOrder, randSource)
 			}
 		} else if lowercaseAllowed {
 			for asciiOrder[0] != asciiLowercase {
-				shuffleAsciiOrder(&asciiOrder, randSource)
+				shuffleASCIIOrder(&asciiOrder, randSource)
 			}
 		} else if uppercaseAllowed {
 			for asciiOrder[0] != asciiUppercase {
-				shuffleAsciiOrder(&asciiOrder, randSource)
+				shuffleASCIIOrder(&asciiOrder, randSource)
 			}
 		}
 	}
 	for i := range password {
-		for byteAsciiType(password[i]) != asciiOrder[i] || strings.Contains(unallowedCharacters[byteAsciiType(password[i])], string(password[i])) {
+		for byteASCIIType(password[i]) != asciiOrder[i] || strings.Contains(unallowedCharacters[byteASCIIType(password[i])], string(password[i])) {
 			password[i] = (password[i] + byte(randSource.Int63())) % 127 // 127 is the max of all possible ASCII characters of interest
 		}
 	}
 	return string(password)
 }
 
-func shuffleAsciiOrder(asciiOrder *[]asciiType, randSource rand.Source) {
+func shuffleASCIIOrder(asciiOrder *[]asciiType, randSource rand.Source) {
 	var i, j int
 	for i = len(*asciiOrder) - 1; i > 0; i-- {
 		j = int(randSource.Int63()) % (i + 1)
@@ -242,7 +242,7 @@ func buildUnallowedCharacters(noSymbol, noDigit, noUppercase, noLowercase bool, 
 		unallowedCharacters[asciiLowercase] += lowercases
 	}
 	for i := range excludeCharacters {
-		t := byteAsciiType(excludeCharacters[i])
+		t := byteASCIIType(excludeCharacters[i])
 		if !strings.Contains(unallowedCharacters[t], string(excludeCharacters[i])) {
 			unallowedCharacters[t] += string(excludeCharacters[i])
 		}
