@@ -249,3 +249,19 @@ derivatex help
 - Hash functions
 - Dashlane password manager
 - Trusting no one / paranoia?
+
+## Cutting a new release
+
+When you're ready to release, ensure you are on the master branch:
+
+1) Create a tag and specify a version number (see [here](https://semver.org/) for info on semantic versioning):
+
+    ```bash
+    git tag -a 0.1.0 -m "short tagging message"
+    ```
+1) Push the tag up:
+
+    ```bash
+    git push origin 0.1.0
+    ```
+That's it! TravisCI takes care of creating all the assets.
