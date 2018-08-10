@@ -169,7 +169,7 @@ func createCLI(params *struct {
 
 	var masterPasswordSHA3, birthdateSHA3, pinCodeSHA3 *[32]byte
 	var user string
-	var protection string = "none"
+	var protection = "none"
 	if params.masterPassword != "" { // master password provided in argument
 		color.Yellow("Your password was provided as a command line flag, but it is safer to provide it within the interactive command line interface of derivatex.")
 		masterPassword := []byte(params.masterPassword)
@@ -187,7 +187,7 @@ func createCLI(params *struct {
 	if params.birthdate != "" { // birthdate provided in argument
 		color.Yellow("Your birthdate was provided as a command line flag, but it is safer to provide it within the interactive command line interface of derivatex.")
 		birthdateBytes := []byte(params.birthdate)
-		var birthdate *[]byte = &birthdateBytes
+		var birthdate = &birthdateBytes
 		if !dateIsValid(birthdate) {
 			color.HiRed("The birthdate you entered is not valid.")
 			clearByteSlice(birthdate)
@@ -424,7 +424,7 @@ func generateCLI(website string, params *struct {
 			color.HiRed("The PIN code you entered is not in the valid format.")
 			return
 		}
-		var pinCodeSHA3 *[32]byte = hashAndDestroy(pinCode)
+		var pinCodeSHA3 = hashAndDestroy(pinCode)
 		decryptedMasterDigest, err := decryptAES(masterDigest, pinCodeSHA3)
 		clearByteArray32(pinCodeSHA3)
 		if err != nil {
