@@ -138,7 +138,7 @@ The following list of situations goes from most likely to happen to most unlikel
 1. Download and compile the source code from the git repository
 
     ```bash
-    go get -v github.com/qdm12/derivatex
+    go get -v github.com/techsek/derivatex
     ```
 
 1. The program `derivatex` is now built in `$GOPATH/bin` (or `%GOPATH%/bin` on Windows platforms)
@@ -150,13 +150,13 @@ The following list of situations goes from most likely to happen to most unlikel
 1. Clone the github repository in your `$GOPATH`
 
     ```bash
-    git clone https://github.com/qdm12/derivatex.git $GOPATH/src/github.com/derivatex
+    git clone https://github.com/techsek/derivatex.git $GOPATH/src/github.com/techsek/derivatex
     ```
 
 1. Build derivatex
 
     ```bash
-    cd $GOPATH/src/github.com/derivatex
+    cd $GOPATH/src/github.com/techsek/derivatex
     dep ensure
     go build
     ```

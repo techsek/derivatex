@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/derivatex/constants"
-	"github.com/derivatex/internal"
+	"github.com/techsek/derivatex/constants"
+	"github.com/techsek/derivatex/internal"
 
 	"github.com/fatih/color"
 	ps "github.com/nbutton23/zxcvbn-go"

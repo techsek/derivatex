@@ -4,8 +4,8 @@ import (
 	"flag"
 	"os"
 
-	"github.com/derivatex/internal"
 	"github.com/fatih/color"
+	"github.com/techsek/derivatex/internal"
 )
 
 var searchFlagSet = flag.NewFlagSet("search", flag.ExitOnError)

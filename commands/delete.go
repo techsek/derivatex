@@ -4,9 +4,9 @@ import (
 	"flag"
 	"strings"
 
-	"github.com/derivatex/constants"
-	"github.com/derivatex/internal"
 	"github.com/fatih/color"
+	"github.com/techsek/derivatex/constants"
+	"github.com/techsek/derivatex/internal"
 )
 
 var deleteFlagSet = flag.NewFlagSet("delete", flag.ExitOnError)

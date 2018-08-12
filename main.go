@@ -3,10 +3,10 @@ package main
 import (
 	"os"
 
-	"github.com/derivatex/internal"
+	"github.com/techsek/derivatex/commands"
+	"github.com/techsek/derivatex/constants"
+	"github.com/techsek/derivatex/internal"
 
-	"github.com/derivatex/commands"
-	"github.com/derivatex/constants"
 	"github.com/fatih/color"
 )
 

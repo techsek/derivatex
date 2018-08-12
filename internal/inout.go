@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/derivatex/constants"
 	"github.com/fatih/color"
+	"github.com/techsek/derivatex/constants"
 	"golang.org/x/crypto/ssh/terminal"
 )
 

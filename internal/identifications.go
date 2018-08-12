@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/derivatex/constants"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cast"
+	"github.com/techsek/derivatex/constants"
 )
 
 // Mostly about interacting with SQLite databse

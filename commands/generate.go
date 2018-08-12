@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/atotto/clipboard"
-	"github.com/derivatex/constants"
-	"github.com/derivatex/internal"
 	"github.com/fatih/color"
 	"github.com/mdp/qrterminal"
+	"github.com/techsek/derivatex/constants"
+	"github.com/techsek/derivatex/internal"
 )
 
 type asciiType uint8

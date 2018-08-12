@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/derivatex/constants"
 	"github.com/fatih/color"
+	"github.com/techsek/derivatex/constants"
 )
 
 func Help() {
