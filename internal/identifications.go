@@ -5,13 +5,15 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/derivatex/constants"
-	"github.com/fatih/color"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/olekukonko/tablewriter"
+	"github.com/spf13/cast"
 )
 
 // Mostly about interacting with SQLite databse
@@ -270,8 +272,15 @@ func GetAllIdentifications(startTime, endTime int64, user string) (identificatio
 }
 
 func DisplayIdentificationsCLI(identifications []IdentificationType) {
-	color.HiWhite(strings.Join(IdentificationTypeLegendStrings(), " | "))
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader(IdentificationTypeLegendStrings())
 	for _, identification := range identifications {
-		color.White(strings.Join(identification.ToStrings(), " | "))
+		value := reflect.ValueOf(identification)
+		var row []string
+		for i := 0; i < value.NumField(); i++ {
+			row = append(row, cast.ToString(value.Field(i).Interface()))
+		}
+		table.Append(row)
 	}
+	table.Render()
 }
