@@ -2,6 +2,14 @@
 
 Smart pseudo-random password generator
 
+[![Derivatex Logo](https://github.com/techsek/derivatex/raw/master/readme/logo.png)](https://github.com/techsek/derivatex)
+
+[![Build Status](https://travis-ci.org/techsek/derivatex.svg?branch=master)](https://travis-ci.org/techsek/derivatex)
+
+[![GitHub last commit](https://img.shields.io/github/last-commit/techsek/derivatex.svg)](https://github.com/techsek/derivatex/commits)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/y/qdm12/cloudflare-dns-server.svg)](https://github.com/techsek/derivatex/commits)
+[![GitHub issues](https://img.shields.io/github/issues/qdm12/cloudflare-dns-server.svg)](https://github.com/techsek/derivatex/issues)
+
 *Stable and will stay backward compatible*
 
 **Keep your SECRET_DIGEST.TXT and DATABASE files safe !!!**
