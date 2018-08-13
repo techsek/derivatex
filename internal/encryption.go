@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"crypto/aes"
@@ -8,7 +8,7 @@ import (
 	"io"
 )
 
-func encryptAES(plaintext *[]byte, key *[32]byte) (ciphertext *[]byte, err error) {
+func EncryptAES(plaintext *[]byte, key *[32]byte) (ciphertext *[]byte, err error) {
 	block, err := aes.NewCipher((*key)[:])
 	if err != nil {
 		return nil, err
@@ -25,7 +25,7 @@ func encryptAES(plaintext *[]byte, key *[32]byte) (ciphertext *[]byte, err error
 	return ciphertext, nil
 }
 
-func decryptAES(ciphertext *[]byte, key *[32]byte) (plaintext *[]byte, err error) {
+func DecryptAES(ciphertext *[]byte, key *[32]byte) (plaintext *[]byte, err error) {
 	block, err := aes.NewCipher((*key)[:])
 	if err != nil {
 		return nil, err

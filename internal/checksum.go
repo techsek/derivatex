@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"errors"
@@ -7,13 +7,13 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func checksumize(data *[]byte) {
+func Checksumize(data *[]byte) {
 	digest := sha3.Sum256(*data)
 	checksum := digest[0:4]
 	*data = append(*data, checksum...)
 }
 
-func dechecksumize(data *[]byte) error {
+func Dechecksumize(data *[]byte) error {
 	if data == nil {
 		return errors.New("No data to verify checksum")
 	}

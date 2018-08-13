@@ -1,6 +1,6 @@
-package main
+package internal
 
-func clearByteSlice(secretPtr *[]byte) {
+func ClearByteSlice(secretPtr *[]byte) {
 	if secretPtr != nil {
 		for i := range *secretPtr {
 			(*secretPtr)[i] = byte(0)
@@ -12,7 +12,7 @@ func clearByteSlice(secretPtr *[]byte) {
 	}
 }
 
-func clearByteArray32(secretPtr *[32]byte) {
+func ClearByteArray32(secretPtr *[32]byte) {
 	if secretPtr != nil {
 		for i := range *secretPtr {
 			(*secretPtr)[i] = byte(0)

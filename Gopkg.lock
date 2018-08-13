@@ -76,12 +76,28 @@
   version = "v0.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:4daa045e1e1f3e23f4b07db6880cdf9f259dab65312dfe244a878e6070faaf77"
+  name = "github.com/olekukonko/tablewriter"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d4647c9c7a84d847478d890b816b7d8b62b0b279"
+
+[[projects]]
   digest = "1:5258068b2b83fac8c8fb9fc64f10c6885d61c0818c86f2836ef2c52dc0f29522"
   name = "github.com/rsc/qr"
   packages = ["."]
   pruneopts = "UT"
   revision = "48b2ede4844e13f1a2b7ce4d2529c9af7e359fc5"
   version = "v0.1.0"
+
+[[projects]]
+  digest = "1:516e71bed754268937f57d4ecb190e01958452336fa73dbac880894164e91c1f"
+  name = "github.com/spf13/cast"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "8965335b8c7107321228e3e3702cab9832751bac"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -136,6 +152,8 @@
     "github.com/mattn/go-sqlite3",
     "github.com/mdp/qrterminal",
     "github.com/nbutton23/zxcvbn-go",
+    "github.com/olekukonko/tablewriter",
+    "github.com/spf13/cast",
     "golang.org/x/crypto/argon2",
     "golang.org/x/crypto/sha3",
     "golang.org/x/crypto/ssh/terminal",
