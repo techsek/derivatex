@@ -1,12 +1,8 @@
 package commands
 
 import (
-	"encoding/base64"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"time"
@@ -16,7 +12,6 @@ import (
 
 	"github.com/fatih/color"
 	ps "github.com/nbutton23/zxcvbn-go"
-	"golang.org/x/crypto/argon2"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
@@ -43,7 +38,7 @@ func createCLI(params *struct {
 	pinCode        string
 }) {
 	fmt.Printf(color.HiWhiteString("Detecting performance of machine for Argon2ID..."))
-	argonTimePerRound := getArgonTimePerRound()                       // depends on the machine
+	argonTimePerRound := internal.GetArgonTimePerRound()              // depends on the machine
 	fmt.Println(color.HiGreenString("%dms/round", argonTimePerRound)) // TODO in goroutine
 
 	var masterPasswordSHA3, birthdateSHA3, pinCodeSHA3 *[32]byte
@@ -116,7 +111,7 @@ func createCLI(params *struct {
 				continue
 			}
 			masterPasswordSHA3Confirm := internal.HashAndDestroy(masterPasswordConfirm)
-			if !byteArrays32Equal(masterPasswordSHA3, masterPasswordSHA3Confirm) {
+			if !internal.ByteArrays32Equal(masterPasswordSHA3, masterPasswordSHA3Confirm) {
 				color.Yellow("The passwords entered do not match, please try again.")
 				internal.ClearByteArray32(masterPasswordSHA3)
 				internal.ClearByteArray32(masterPasswordSHA3Confirm)
@@ -148,7 +143,7 @@ func createCLI(params *struct {
 				continue
 			}
 			birthdateSHA3Confirm := internal.HashAndDestroy(birthdateConfirm)
-			if !byteArrays32Equal(birthdateSHA3, birthdateSHA3Confirm) {
+			if !internal.ByteArrays32Equal(birthdateSHA3, birthdateSHA3Confirm) {
 				color.Yellow("The birthdates entered do not match, please try again.")
 				internal.ClearByteArray32(birthdateSHA3)
 				internal.ClearByteArray32(birthdateSHA3Confirm)
@@ -183,7 +178,7 @@ func createCLI(params *struct {
 					continue
 				}
 				pinCodeSHA3Confirm := internal.HashAndDestroy(pinCodeConfirm)
-				if !byteArrays32Equal(pinCodeSHA3, pinCodeSHA3Confirm) {
+				if !internal.ByteArrays32Equal(pinCodeSHA3, pinCodeSHA3Confirm) {
 					color.Yellow("The PIN codes entered do not match, please try again.")
 					internal.ClearByteArray32(pinCodeSHA3)
 					internal.ClearByteArray32(pinCodeSHA3Confirm)
@@ -235,7 +230,7 @@ func createCLI(params *struct {
 		}
 	}()
 	// Launch computation
-	masterDigest := createMasterDigest(masterPasswordSHA3, birthdateSHA3) // masterDigest is argonDigestSize bytes long
+	masterDigest := internal.CreateMasterDigest(masterPasswordSHA3, birthdateSHA3) // masterDigest is argonDigestSize bytes long
 
 	// Clean up
 	internal.ClearByteArray32(masterPasswordSHA3)
@@ -258,7 +253,7 @@ func createCLI(params *struct {
 	}
 
 	// TODO Yubikey with https://github.com/marshallbrekka/go-u2fhost
-	err := writeMasterDigest(user, protection, masterDigest)
+	err := internal.WriteMasterDigest(user, protection, masterDigest)
 	internal.ClearByteSlice(masterDigest)
 	if err != nil {
 		color.HiRed("Error writing master digest to file: " + err.Error())
@@ -267,59 +262,10 @@ func createCLI(params *struct {
 	color.HiGreen("Master digest saved successfully!")
 }
 
-func createMasterDigest(masterPasswordSHA3 *[32]byte, birthdateSHA3 *[32]byte) (masterDigest *[]byte) {
-	masterDigest = new([]byte)
-	*masterDigest = argon2.IDKey((*masterPasswordSHA3)[:], (*birthdateSHA3)[:], constants.ArgonTimeCost, constants.ArgonMemoryMB*1024, constants.ArgonParallelism, constants.ArgonDigestSize)
-	return masterDigest
-}
-
-func getArgonTimePerRound() int64 {
-	start := time.Now()
-	argon2.IDKey([]byte{}, []byte{}, constants.ArgonTestRounds, constants.ArgonMemoryMB*1024, constants.ArgonParallelism, constants.ArgonDigestSize)
-	elapsed := time.Since(start)
-	return int64(elapsed.Nanoseconds()/int64(constants.ArgonTestRounds)) / 1000000
-}
-
-func writeMasterDigest(defaultUser string, protection string, masterDigest *[]byte) error {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		return err
-	}
-	var content = new([]byte)
-	*content = append(*content, []byte("Default user: "+defaultUser+"\n")...)
-	*content = append(*content, []byte("Protection: "+protection+"\n")...)
-	*content = append(*content, []byte("Secret Digest: ")...)
-	*content = append(*content, []byte(base64.StdEncoding.EncodeToString(*masterDigest))...)
-	err = ioutil.WriteFile(dir+"/"+constants.MasterDigestFilename, *content, 0644)
-	internal.ClearByteSlice(content)
-	return err
-}
-
 func dateIsValid(date *[]byte) bool {
 	_, err := time.Parse("02/01/2006", string(*date))
 	if err != nil {
 		return false
-	}
-	return true
-}
-
-func byteSlicesEqual(b1 *[]byte, b2 *[]byte) bool {
-	if len(*b1) != len(*b2) {
-		return false
-	}
-	for i := range *b1 {
-		if (*b1)[i] != (*b2)[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func byteArrays32Equal(b1 *[32]byte, b2 *[32]byte) bool {
-	for i := range *b1 {
-		if (*b1)[i] != (*b2)[i] {
-			return false
-		}
 	}
 	return true
 }

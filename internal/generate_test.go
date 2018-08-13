@@ -1,4 +1,4 @@
-package commands
+package internal
 
 import (
 	"math/rand"
@@ -162,7 +162,7 @@ func Test_shuffleAsciiOrder(t *testing.T) {
 	}
 }
 
-func Test_determinePassword(t *testing.T) {
+func Test_DeterminePassword(t *testing.T) {
 	cases := []struct {
 		masterDigest        []byte
 		websiteName         []byte
@@ -232,7 +232,7 @@ func Test_determinePassword(t *testing.T) {
 			[]byte(""),
 			10,
 			1,
-			buildUnallowedCharacters(false, false, true, true, ""),
+			BuildUnallowedCharacters(false, false, true, true, ""),
 			`<636/\/)38`,
 		},
 		{
@@ -241,7 +241,7 @@ func Test_determinePassword(t *testing.T) {
 			[]byte(""),
 			10,
 			1,
-			buildUnallowedCharacters(true, false, false, false, ""),
+			BuildUnallowedCharacters(true, false, false, false, ""),
 			`j3nlfCL08L`,
 		},
 		{
@@ -264,7 +264,7 @@ func Test_determinePassword(t *testing.T) {
 		},
 	}
 	for _, c := range cases {
-		out := determinePassword(&c.masterDigest, c.websiteName, c.user, c.passwordLength, c.round, c.unallowedCharacters)
+		out := DeterminePassword(&c.masterDigest, c.websiteName, c.user, c.passwordLength, c.round, c.unallowedCharacters)
 		if out != c.password {
 			t.Errorf("byteAsciiType(%v, %s, %d) == %s want %s", c.masterDigest, string(c.websiteName), c.passwordLength, out, c.password)
 		}
