@@ -102,7 +102,7 @@ as it is safer since commands are saved in bash history.`,
 
 		user := defaultUser
 		if user != "" { // user flag provided
-			user = user
+			user = generateP.user
 		}
 
 		newIdentification := internal.IdentificationType{
