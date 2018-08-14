@@ -10,109 +10,96 @@ Smart pseudo-random password generator
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/y/qdm12/cloudflare-dns-server.svg)](https://github.com/techsek/derivatex/commits)
 [![GitHub issues](https://img.shields.io/github/issues/qdm12/cloudflare-dns-server.svg)](https://github.com/techsek/derivatex/issues)
 
-*Stable and will stay backward compatible*
+*Stable and will stay backward compatible (hopefully)*
 
-**Keep your SECRET_DIGEST.TXT and DATABASE files safe !!!**
+**Keep your seed.txt and database.sqlite files safe !!!**
 
-## TO DOs
+## Features
 
-### Documentation
+### Current features
 
-- [ ] Diagram on Banana Split
-- [ ] Donation button
-  - [ ] Bitcoin
-  - [ ] Ethereum
-  - [ ] Ada (haha)
-  - [ ] Paypal
-- [ ] Add diagram to explain how to generate passwords for signup and login
-- [ ] Make logo, maybe with ASCII art?
-- [ ] Add Github Markdown badges to readme
-  - [ ] Travis CI build
-  - [ ] Unit testing code coverage
-  - [ ] Docker hub build / Travis docker build
-  - [ ] Last commit
-  - [ ] Commit activity
-  - [ ] Issues
-  - [ ] Docker pulls
-  - [ ] Docker stars
-  - [ ] Docker build automated
-  - [ ] Docker image size and layers
-  - [ ] Version
-- [ ] Roadmap
-- [ ] Github wiki
-  - [ ] CLI
-
-### Security and architecture
-
-- [ ] Yubikeys / Google Authenticator locally?
-- [ ] *LATER* Write more unit tests
-- [ ] **Banana Split**: New architecture to revoke the secret digest
-  - [ ] Server side
-    - [ ] C++ bindings to [Palisade](https://git.njit.edu/palisade/PALISADE/wikis/Use-The-Library)
-    - [ ] Store half of secret digest on blockchain?
-    - [ ] Client communication / router
-    - [ ] Yubikeys / Google Authenticator
-    - [ ] Docker container
-  - [ ] Client side
-    - [ ] Communicate with server at create and generate stages
-  - [ ] Store database on server?
-
-### CLI
-
-- [ ] Yubikeys / Google Authenticator
-- [ ] Fix different drive paths on Windows platform
-- [ ] Flag to choose the CSV separator when dumping a table
-- [ ] Make search command work with multiple words separated by space
-- [ ] Generate seed words (i.e. 12 words for cardano)
-- [ ] Generate SSH keys
-- [ ] Calculate and display entropy of final password
-- [ ] Preferences file
-  - [ ] Default search: Exlusive or not
-  - [ ] Size of ASCII QR code
-
-### UI
-
-- [ ] Computer UI
-- [ ] Mobile UI once *Banana Split* is finished
-
-### Distribution
-
-- [ ] Pre-built binaries for all computer platforms (not mobile)
-- [ ] Docker image for the CLI
-
-## Features overview
-
-- Generates a **different** **strong** password for each website
-- **Always** generates the same password for the same website
-- Default password generation settings
-  - **Match most website password requirements**
-  - Produces a **very strong password** (entropy of 128 bits)
+- derivatex uses a *seed* to generate your passwords and keys pseudo-randomly
+- **Recovery**: Generate or re-generate the seed `seed.txt` for derivatex deterministically using:
+  - your master password
+  - your birthdate
+  - 10 minutes (on a desktop CPU)
+  - A computer with more than 512MB of RAM
+- derivatex **always** generates the same password for the same (website, user) combination
+- **Password security**: derivatex generates a password for each (website, user) combination that:
+  - is **different**
+  - is **pseudo-random** using the *seed*
+  - is **strong** with 128 bits of security
+  - **match most website password requirements**
 - Default password generation settings produce strong passwords with
   - 20 characters
   - An equal amount of symbols, digits, lowercase letters and uppercase letters
   - A pseudo-random order of characters
-- Password generation settings **can be changed** for a particular website
-  - In example: password length, no symbols, etc.
-- Password generation settings and corresponding user are stored in a SQLite database in the file *database*
-- The database can be dumped to a friendlier CSV file
-- Restore your generator using your master password and your birthdate and 10 minutes
-- Only carry 3 files to generate your passwords
-- Argon2id is used to produce *secret_digest.txt* to remove the low entropy issue of your master password.
+- **Adaptable**: Password generation settings **can be changed** for a particular website (i.e. password length, no symbols)
+- **Password Management**: Website, user and password generation settings are stored in a SQLite database in the file `database.sqlite`
+- **Export**: The database tables can be dumped to CSV files
+- **Portability**: All your password management and generation are contained in 3 files: `derivatex`, `seed.txt` and `database.sqlite`
+- **Master password protection**: Argon2ID is used to generate the seed from your master password and birthdate
+  - Your master password is protected from its usually low security entropy (output of Argon2ID is a 512 bit key after 10 minutes)
+  - Your master password or birthdate can't be recovered from the *seed* as Argon2ID is a one-way hash function
+- **Resistant to stealing**
+  - An adjective and common noun are randomly picked to encrypt your *seed*
+  - The two words are fed to Argon2ID which uses approximately 1 second per try to limit parallel bruteforce attacks (GPUs, FPGAs, ASICs)
+  - This forces an attacker to try 10,000 * 170,000 tries = 54 years on a 4 core machine with 512MB of RAM, probably enough time for you to change your passwords.
 
-## Scheme overview
+### Future features
+
+- **E2EE storage**: Store your `database.sqlite` and `seed.txt` with end-to-end encryption
+- **Revokation**: Revoke your *seed* using a server and homomorphic encryption (see future scheme below)
+- **2F auth**: Use Google Authenticator and/or Yubikeys
+- **IP filtering**: Ask for 2F auth if the IP is not the usual IP address to block hackers or stealers
+- **Email alerting**: Send one way email alerts when your server seed is accessed by a new IP address for example
+- **Privacy preserved**: The server has only access to one of the 2 seeds and computes your passwords with homomorphic encryption. The server never knows your passwords or the full seed.
+
+## Scheme
+
+### Current scheme
 
 ![Derivatex diagram](readme/derivatex.svg)
 
 *A few notes*:
 
 - Sign up and log in procedures both require the generation of a password
-- Passwords are not saved and only rely on `secret_digest.txt`, you should not save the generated passwords
-- The SQLite database is stored in the local file `database`
-- The database is used to check for existing records and modify them if necessary
+- Passwords are not saved and only rely on `seed.txt`, you should not save the generated passwords
+- The database `database.sqlite` is used to check for existing records and modify them if necessary
+
+### Future scheme
+
+- **Creation stage**:
+  1. Generate the seed `S` using Argon2ID, your master password and birthdate as before
+  1. Split `S` in two halves `S1` and `S2`
+  1. Send `S2` to our server
+  1. Delete `S` and `S2` permanently from local device
+- **Generation stage**: To generate a password for the website `cryptoblog` and the user `alice`:
+  1. Produce the digest `D` = SHA3_256(`cryptoblog`+`alice`)
+  1. Generate a keypair (`privKey`, `pubKey`) for homomorphic encryption (or use a pre-generated one)
+  1. Encrypt `S1` with `pubKey` to give `Enc(S1)`
+  1. Encrypt `D` with `pubKey` to give `Enc(D)`
+  1. Send `pubKey`, `Enc(D)`, and `Enc(S1)` to our server
+  1. Our server encrypts its seed half `S2` with `pubKey` to give `Enc(S2)`
+  1. Our server computes the digest of SHA3_256(S1+S2+D) using homomorphic encryption
+  1. Our server sends back the encrypted digest `Enc(password)`
+  1. Decrypt `Enc(password)` using `privKey` to provide `password`
+  1. Force `password` (just bytes) to match the password requirements (i.e. ASCII with no symbols)
+
+With this scheme, many new features are then available:
+
+- **Revokation**: Revoke your *seed* through the server
+- **2F auth**: Use Google Authenticator and/or Yubikeys
+- **IP filtering**: Ask for 2F auth if the IP is not the usual IP address to block hackers or stealers
+- **Email alerting**: Send one way email alerts when your server seed is accessed by a new IP address for example
+- **Privacy preserved**: The server has only access to one of the 2 seeds and computes your passwords with homomorphic encryption. The server never knows your passwords or the full seed.
+
+The only way an attacker *Eve* can be successful is to access our server **and** your device, which is quite unlikely.
+Note that more servers could be added by splitting the seed in more parts or even using *secret sharing*.
 
 ## Other security aspects
 
-- Extensive unit testing for solid security
+- Extensive unit testing for solid security (TODO)
 - Minimal memory footprint of sensitive data using pointers for byte arrays
 
 ## Resistance
@@ -124,23 +111,39 @@ The following list of situations goes from most likely to happen to most unlikel
 - **Situation**: *Eve* hacks the database of *www.terriblewebsite.com* which stores passwords in plaintext
   - **Damage**: *Eve* has access to your account at *www.terriblewebsite.com* only
   - **Resistance**: *Eve* can't access other websites you are registered at (*each password generated is unique*)
-  - **Resistance**: The *secret_digest.txt* file can't be obtained from the password (*password is derived using the SHA3 256 sponge hash function* - even quantum cracking would fail)
+  - **Resistance**: The *seed.txt* file can't be obtained from the password (*password is derived using the SHA3 256 hash function* - even quantum bruteforcing would fail)
   - **Intervention**: Generate another password for *www.terriblewebsite.com* using the option flag `-round=2` (or more) and change your password on *www.terriblewebsite.com*
 - **Situation**: *Eve* knows your username and tries to bruteforce your account on *www.terriblewebsite.com*
-  - **Resistance**: Using default settings (or similar or better), *Eve* will need centuries to bruteforce successfully the password in parallel using GPUs, FPGAs or ASICs
-- **Situation**: *Eve* obtains your *secret_digest.txt*, *database* and *derivatex* files
-  - **Resistance**: *Eve* can't recover your master password or birthdate (use of Argon2id with demanding resources)
-  - **Intervention**: Change your master password completely, and change all your passwords ASAP
+  - **Resistance**: Using default settings (or similar or better), *Eve* will need centuries to bruteforce successfully the password
+  - **Intervention**: None
+- **Situation**: *Eve* obtains your *database.sqlite* and *derivatex* files
+  - **Damage**: *Eve* knows
+    - The websites you are registered on with what user
+    - Your password generation settings for each website (i.e. password length)
+  - **Resistance**: *Eve* does not have your passwords and can't find them unless they were generated with very poor security settings (i.e. only digits with length 4)
+  - **Intervention**: None
+- **Situation**: *Eve* obtains your *seed.txt*, *database.sqlite* and *derivatex* files
+  - **Damage**: *Eve* knows
+    - The websites you are registered on with what user
+    - Your password generation settings for each website (i.e. password length)
+    - She can re-generate your passwords IFF:
+      - **FUTURE FEATURE**: She uses your usual IP address / machine OR has access to your 2F auth
+      - **FUTURE FEATURE**: You did not revoke the server seed yet
+  - **Resistance**:
+    - *Eve* can't recover your master password or birthdate (Argon2id)
+    - **FUTURE FEATURE** *Eve* can be blocked and asked for your 2F Auth if she uses a machine with an IP address different from your usual IP addresses
+    - **FUTURE FEATURE** *Eve* will not be able to generate passwords as soon as the server seed is revoked
+  - **Intervention**: Change your master password, re-generate a seed and change all your passwords
 - **Situation**: *Eve* knows your birthdate **and** master password
-  - **Damage**: *Eve* can re-generate your *secret_digest.txt* in about 10 minutes, and generate any password
+  - **Damage**: *Eve* generates your *seed.txt* and can generate any password
   - **Resistance**: *Eve* does not know on which website you are registered and which password settings you used
-  - **Intervention**: Change your master password completely, and change all your passwords ASAP
+  - **Intervention**: Change your master password, re-generate a seed and change all your passwords
 
 ## Quick guide
 
-### Download and installation
+### 1. Download and installation
 
-#### Install using `go get`
+#### 1.1. Install using `go get`
 
 1. Install [Golang](https://golang.org/dl/)
 1. Download and compile the source code from the git repository
@@ -151,7 +154,7 @@ The following list of situations goes from most likely to happen to most unlikel
 
 1. The program `derivatex` is now built in `$GOPATH/bin` (or `%GOPATH%/bin` on Windows platforms)
 
-#### Build from source
+#### 1.2. Build from source
 
 1. Install [Golang](https://golang.org/dl/)
 1. Install [dep](https://golang.github.io/dep/docs/installation.html) for dependency management
@@ -176,7 +179,7 @@ The following list of situations goes from most likely to happen to most unlikel
 - Do not disclose what program you are using
 - Scan the QR code from an offline device i.e. a Raspberry Pi
 
-### Command line interface
+### 2. Command line interface
 
 1. You might want to move the `derivatex` executable to a safe location, say `/your/safe/path/`
 1. Go to `/your/safe/path/`
@@ -197,9 +200,9 @@ The following list of situations goes from most likely to happen to most unlikel
     derivatex generate instagram
     ```
 
-Keep the **secret_digest.txt** file safe as it serves as the seed to the generation of your passwords.
+Keep the **seed.txt** file safe as it serves as the seed to the generation of your passwords.
 
-The file *database* is only used to store information about the password generation and is not very sensitive, although it is better to keep it safe.
+The file *database.sqlite* is only used to store information about the password generation and is not very sensitive, although it is better to keep it safe.
 
 See more details on how to use derivatex with:
 
@@ -209,19 +212,19 @@ derivatex help
 
 ## Details
 
-### Creation of secret_digest.txt
+### Creation of seed.txt (this is being changed)
 
 - Uses Argon2ID with the following parameters:
   - Data is the digest of SHA3_256(password)
-  - Salt is the SHA3_256(birthdate)
-  - Time cost is 500 rounds (takes 4 minutes on the quad core machine)
-  - Memory required is 2048MB
-  - Parallelism is set to 1 thread
-- Resistant to parallel attacks (2048MB Memory per processing unit)
-- Most of computers / phones have 2048MB of ram
+  - Salt is the SHA3_256(birthdate) - not good, but better than nothing
+  - Time cost is 5000 rounds (takes 10 minutes with a Ryzen 2700x CPU)
+  - Memory required is 512MB
+  - Parallelism is set to 4 threads
+- Resistant to parallel attacks (512MB Memory for 4 processing units)
+- Most of computers / phones have 512MB of ram
 - Outputs a 512bits key
 
-### Pseudo-random password generation
+### Pseudo-random password generation (this is being changed)
 
 - Fast, deterministic and resistant to bruteforce attacks
 - Pseudo randomn permutations by using rand.Seed with different source data
@@ -250,6 +253,110 @@ derivatex help
 - Records can be deleted from the database
 - A table from the database can be dumped to a CSV file
 
+## TO DOs
+
+### Urgent
+
+- [ ] Replace PIN code with 2 random words passphrase with Argon2id
+- [ ] Interactive CLI command choice when no argument is provided
+- [ ] Rework code with future server in mind
+  - [ ] Split secret digest into 2 256-bit halves
+  - [ ] Do SHA 256 of (website+user)
+- [ ] Rework code for language portability
+  - [ ] Understand rand.Seed or use something else in password generation
+- [ ] Log file
+- [ ] Rework CLI with [urface/cli](https://github.com/urfave/cli)
+
+### Documentation
+
+- [ ] Roadmap
+- [ ] Add diagram to explain how to generate passwords for signup and login
+- [ ] Diagram on Banana Split
+- [x] Make logo, maybe with ASCII art?
+- [ ] Add Github Markdown badges to readme
+  - [x] Travis CI build
+  - [ ] Unit testing code coverage
+  - [ ] Docker hub build / Travis docker build
+  - [x] Last commit
+  - [x] Commit activity
+  - [x] Issues
+  - [ ] Docker pulls
+  - [ ] Docker stars
+  - [ ] Docker build automated
+  - [ ] Docker image size and layers
+  - [ ] Version
+- [ ] Github wiki
+  - [ ] CLI
+- [ ] Donation button
+  - [ ] Bitcoin
+  - [ ] Ethereum
+  - [ ] Ada (haha)
+  - [ ] Paypal
+
+### CLI
+
+- [ ] Fix different drive paths on Windows platform
+- [ ] Flag to choose the CSV separator when dumping a table
+- [ ] Make search command work with multiple words separated by space
+- [ ] Generate seed words (i.e. 12 words for cardano)
+- [ ] Generate SSH keys
+- [ ] Calculate and display entropy of final password
+- [ ] Preferences file
+  - [ ] Default search: Exlusive or not
+  - [ ] Size of ASCII QR code
+
+### Core client code
+
+- [ ] Database migrations?
+- [ ] *LATER* Write more unit tests
+
+### Server
+
+- [ ] End-to-end encrypted and synced storage
+  - [ ] Identifications database
+  - [ ] Log file
+- [ ] Log in to server using password (maybe 2 same words?) with Google Authenticator or Yubikey
+  - [ ] Google Authenticator: Use the SHA(seed[:32]) as the seed (or something else depending on revoke feature)
+  - [ ] Yubikey
+  - [ ] Some secret sharing ? More servers?
+- [ ] Homomorphic encryption
+  - [ ] Revoke feature by deleting the half seed S2 on the server
+  - [ ] Revoke and replace feature would be great?
+  - [ ] IP filtering, email alerts
+  - [ ] Use [Palisade](https://git.njit.edu/palisade/PALISADE/wikis/Use-The-Library) or stick to HElib?
+
+### UI
+
+- [ ] Computer UI
+- [ ] Mobile UI
+
+### Distribution
+
+- [x] Travis CI automated build with testing
+- [x] Pre-built binaries for all computer platforms (not mobile)
+- [ ] Docker image for the CLI
+- [ ] Docker image for the server
+
+## Cutting a new release
+
+When you're ready to release, ensure you are on the master branch:
+
+1. Create a tag and specify a version number (see [here](https://semver.org/) for info on semantic versioning)
+
+    ```bash
+    git tag -a 0.1.0 -m "short tagging message"
+    ```
+
+1. Push the tag up
+
+    ```bash
+    git push origin 0.1.0
+    ```
+
+That's it! TravisCI takes care of creating all the assets.
+
+See [keepachangelog.com](https://keepachangelog.com/en/1.0.0/) for more good habits
+
 ## Inspiration
 
 - Seeds of Bitcoin wallets
@@ -257,19 +364,5 @@ derivatex help
 - Hash functions
 - Dashlane password manager
 - Trusting no one / paranoia?
-
-## Cutting a new release
-
-When you're ready to release, ensure you are on the master branch:
-
-1) Create a tag and specify a version number (see [here](https://semver.org/) for info on semantic versioning):
-
-    ```bash
-    git tag -a 0.1.0 -m "short tagging message"
-    ```
-1) Push the tag up:
-
-    ```bash
-    git push origin 0.1.0
-    ```
-That's it! TravisCI takes care of creating all the assets.
+- qdm12/hbc
+- Palisade and HElib
