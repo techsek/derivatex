@@ -13,7 +13,7 @@ var rootCmd = &cobra.Command{
 	Long: `Derivatex is a smart pseudo-random password generator. More
 info can be found at https://github.com/techsek/derivatex`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("maybe print usage?")
+		cmd.Help()
 	},
 }
 
