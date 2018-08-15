@@ -27,7 +27,7 @@ func init() {
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all identifications.",
+	Short: "List all identifications",
 	Long:  `Display all identifications you have generated.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var startUnix, endUnix int64 = 0, time.Now().Unix() // default values

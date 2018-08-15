@@ -23,7 +23,7 @@ func init() {
 
 var dumpCmd = &cobra.Command{
 	Use:   "dump",
-	Short: "Dump database to a CSV file.",
+	Short: "Dump database to a CSV file",
 	Long:  `Dump database to a CSV file.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if dumpP.outputFilename == "" {

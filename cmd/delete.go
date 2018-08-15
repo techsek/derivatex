@@ -25,7 +25,7 @@ func init() {
 
 var deleteCmd = &cobra.Command{
 	Use:   "delete <websitename>",
-	Short: "Delete an identification matching the website name.",
+	Short: "Delete an identification matching the website name",
 	Long:  `Delete an identification matching the website name.`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

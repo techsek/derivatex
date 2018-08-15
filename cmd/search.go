@@ -22,7 +22,7 @@ func init() {
 
 var searchCmd = &cobra.Command{
 	Use:   "search <querystring>",
-	Short: "Search identifications containing the query string.",
+	Short: "Search identifications containing the query string",
 	Long:  `Search identifications containing the query string.`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

@@ -57,7 +57,7 @@ func init() {
 
 var generateCmd = &cobra.Command{
 	Use:   "generate <websitename>",
-	Short: "Create the master digest.",
+	Short: "Create the master digest",
 	Long: `Create the master password digest. By default this runs interactively
 as it is safer since commands are saved in bash history.`,
 	Args: cobra.ExactArgs(1),

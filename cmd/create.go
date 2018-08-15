@@ -35,7 +35,7 @@ func init() {
 
 var createCmd = &cobra.Command{
 	Use:   "create",
-	Short: "Create the master digest.",
+	Short: "Create the master digest",
 	Long: `Create the master password digest. By default this runs interactively
 as it is safer since commands are saved in bash history.`,
 	Run: func(cmd *cobra.Command, args []string) {
