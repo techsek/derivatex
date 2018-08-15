@@ -273,6 +273,7 @@ func GetAllIdentifications(startTime, endTime int64, user string) (identificatio
 
 func DisplayIdentificationsCLI(identifications []IdentificationType) {
 	table := tablewriter.NewWriter(os.Stdout)
+	table.SetColWidth(0)
 	table.SetHeader(IdentificationTypeLegendStrings())
 	for _, identification := range identifications {
 		value := reflect.ValueOf(identification)
