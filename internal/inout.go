@@ -37,14 +37,14 @@ func ReadSecret(prompt string) (secretPtr *[]byte, err error) {
 }
 
 // We just use sha3 as the input space is already 512 bits and is impossible to crack
-func ReadMasterDigest() (defaultUser string, protection string, masterDigest *[]byte, err error) {
+func ReadSeed() (defaultUser string, protection string, seed *[]byte, err error) {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		return "", "", nil, err
 	}
 	var content = new([]byte)
 	defer ClearByteSlice(content)
-	*content, err = ioutil.ReadFile(dir + "/" + constants.MasterDigestFilename)
+	*content, err = ioutil.ReadFile(dir + "/" + constants.SeedFilename)
 	if err != nil {
 		return "", "", nil, err
 	}
@@ -53,39 +53,39 @@ func ReadMasterDigest() (defaultUser string, protection string, masterDigest *[]
 	var i int
 	i = bytes.Index(*content, []byte("Default user: "))
 	if i < 0 {
-		return "", "", nil, errors.New("'Default user: ' not found in secret digest file")
+		return "", "", nil, errors.New("'Default user: ' not found in " + constants.SeedFilename)
 	}
 	if i > 0 {
-		return "", "", nil, errors.New("'Default user: ' must be the start of the secret digest file")
+		return "", "", nil, errors.New("'Default user: ' must be the start of " + constants.SeedFilename)
 	}
 	clearAndTrim(content, i+len([]byte("Default user: ")))
 	i = bytes.Index(*content, []byte("\n"))
 	if i < 0 {
-		return "", "", nil, errors.New("New line not found after 'Default user: ' in secret digest file")
+		return "", "", nil, errors.New("New line not found after 'Default user: ' in " + constants.SeedFilename)
 	}
 	defaultUser = string((*content)[:i])
 	clearAndTrim(content, i+len([]byte("\n")))
 	i = bytes.Index(*content, []byte("Protection: "))
 	if i < 0 {
-		return "", "", nil, errors.New("'Protection: ' not found in secret digest file")
+		return "", "", nil, errors.New("'Protection: ' not found in " + constants.SeedFilename)
 	}
 	clearAndTrim(content, i+len([]byte("Protection: ")))
 	i = bytes.Index(*content, []byte("\n"))
 	if i < 0 {
-		return "", "", nil, errors.New("New line not found after 'Protection: ' in secret digest file")
+		return "", "", nil, errors.New("New line not found after 'Protection: ' in " + constants.SeedFilename)
 	}
 	protection = string((*content)[:i])
 	clearAndTrim(content, i+len([]byte("\n")))
-	i = bytes.Index(*content, []byte("Secret Digest: "))
+	i = bytes.Index(*content, []byte("Secret Seed: "))
 	if i < 0 {
-		return "", "", nil, errors.New("'Secret Digest: ' not found in secret digest file")
+		return "", "", nil, errors.New("'Secret Seed: ' not found in " + constants.SeedFilename)
 	}
-	clearAndTrim(content, i+len([]byte("Secret Digest: ")))
-	masterDigest = new([]byte)
-	*masterDigest, err = base64.StdEncoding.DecodeString(string(*content))
+	clearAndTrim(content, i+len([]byte("Secret Seed: ")))
+	seed = new([]byte)
+	*seed, err = base64.StdEncoding.DecodeString(string(*content))
 	ClearByteSlice(content)
 	if err != nil {
 		return "", "", nil, err
 	}
-	return defaultUser, protection, masterDigest, nil
+	return defaultUser, protection, seed, nil
 }

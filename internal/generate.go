@@ -32,10 +32,9 @@ var (
 
 type unallowedCharactersType map[asciiType]string
 
-func DeterminePassword(masterDigest *[]byte, websiteName []byte, user []byte, passwordLength uint8, round uint16, unallowedCharacters unallowedCharactersType) string {
-	// Hashes masterDigest+websiteName to obtain an initial
+func DeterminePassword(seed *[]byte, websiteName []byte, user []byte, passwordLength uint8, round uint16, unallowedCharacters unallowedCharactersType) string {
 	input := new([]byte)
-	*input = append(*masterDigest, websiteName...)
+	*input = append(*seed, websiteName...)
 	*input = append(*input, user...)
 	digest := HashAndDestroy(input) // 32 ASCII characters
 	// Rounds of password (to renew password, in example)

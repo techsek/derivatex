@@ -232,7 +232,7 @@ as it is safer since commands are saved in bash history.`,
 			}
 		}()
 		// Launch computation
-		masterDigest := internal.CreateMasterDigest(masterPasswordSHA3, birthdateSHA3) // masterDigest is argonDigestSize bytes long
+		seed := internal.CreateSeed(masterPasswordSHA3, birthdateSHA3) // seed is argonDigestSize bytes long
 
 		// Clean up
 		internal.ClearByteArray32(masterPasswordSHA3)
@@ -242,21 +242,21 @@ as it is safer since commands are saved in bash history.`,
 		color.HiGreen("Master digest computed successfully")
 
 		if protection == "pin" {
-			internal.Checksumize(masterDigest)
-			var decryptedMasterDigest *[]byte
-			decryptedMasterDigest, err := internal.EncryptAES(masterDigest, pinCodeSHA3)
+			internal.Checksumize(seed)
+			var decryptedSeed *[]byte
+			decryptedSeed, err := internal.EncryptAES(seed, pinCodeSHA3)
 			if err != nil {
 				color.HiRed("The following error occurred when encrypting the master digest: " + err.Error())
 				return
 			}
-			masterDigest = decryptedMasterDigest
+			seed = decryptedSeed
 			internal.ClearByteArray32(pinCodeSHA3)
 			color.HiGreen("\nMaster digest encrypted using PIN code successfully")
 		}
 
 		// TODO Yubikey with https://github.com/marshallbrekka/go-u2fhost
-		err := internal.WriteMasterDigest(user, protection, masterDigest)
-		internal.ClearByteSlice(masterDigest)
+		err := internal.WriteSeed(user, protection, seed)
+		internal.ClearByteSlice(seed)
 		if err != nil {
 			color.HiRed("Error writing master digest to file: " + err.Error())
 			return

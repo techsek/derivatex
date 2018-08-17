@@ -29,7 +29,7 @@ type generateParams struct {
 	clipboard                 bool
 	passwordOnly              bool
 	save                      bool
-	PasswordDerivationVersion int
+	passwordDerivationVersion int
 }
 
 var generateP generateParams
@@ -67,7 +67,7 @@ as it is safer since commands are saved in bash history.`,
 			color.HiRed("The password can't be generated with all possible characters excluded")
 			return
 		}
-		defaultUser, protection, masterDigest, err := internal.ReadMasterDigest()
+		defaultUser, protection, seed, err := internal.ReadSeed()
 		if err != nil {
 			color.Yellow("An error occurred reading the master digest file: " + err.Error())
 			return
@@ -82,21 +82,21 @@ as it is safer since commands are saved in bash history.`,
 				return
 			}
 			var pinCodeSHA3 = internal.HashAndDestroy(pinCode)
-			decryptedMasterDigest, err := internal.DecryptAES(masterDigest, pinCodeSHA3)
+			decryptedSeed, err := internal.DecryptAES(seed, pinCodeSHA3)
 			internal.ClearByteArray32(pinCodeSHA3)
 			if err != nil {
-				internal.ClearByteSlice(decryptedMasterDigest)
+				internal.ClearByteSlice(decryptedSeed)
 				color.HiRed("Decryption error: " + err.Error())
 				return
 			}
-			err = internal.Dechecksumize(decryptedMasterDigest)
+			err = internal.Dechecksumize(decryptedSeed)
 			if err != nil {
-				internal.ClearByteSlice(decryptedMasterDigest)
+				internal.ClearByteSlice(decryptedSeed)
 				color.HiRed("Master digest or PIN Code is invalid - " + err.Error())
 				return
 			}
-			internal.ClearByteSlice(masterDigest)
-			masterDigest = decryptedMasterDigest
+			internal.ClearByteSlice(seed)
+			seed = decryptedSeed
 		}
 
 		user := defaultUser
@@ -168,7 +168,7 @@ as it is safer since commands are saved in bash history.`,
 		}
 		if protection == "pin" && generateP.pinCode == "" {
 			var pinCodeSHA3 *[32]byte
-			var decryptedMasterDigest *[]byte
+			var decryptedSeed *[]byte
 			for {
 				pinCode, err := internal.ReadSecret("Enter your PIN code to decrypt the master digest: ")
 				if err != nil {
@@ -182,21 +182,21 @@ as it is safer since commands are saved in bash history.`,
 					continue
 				}
 				pinCodeSHA3 = internal.HashAndDestroy(pinCode)
-				decryptedMasterDigest, err = internal.DecryptAES(masterDigest, pinCodeSHA3)
+				decryptedSeed, err = internal.DecryptAES(seed, pinCodeSHA3)
 				internal.ClearByteArray32(pinCodeSHA3)
 				if err != nil {
-					internal.ClearByteSlice(decryptedMasterDigest)
+					internal.ClearByteSlice(decryptedSeed)
 					color.HiRed("Decryption error: " + err.Error())
 					continue
 				}
-				err = internal.Dechecksumize(decryptedMasterDigest)
+				err = internal.Dechecksumize(decryptedSeed)
 				if err != nil {
-					internal.ClearByteSlice(decryptedMasterDigest)
+					internal.ClearByteSlice(decryptedSeed)
 					color.HiRed("Master digest or PIN Code is invalid - " + err.Error())
 					continue
 				}
-				internal.ClearByteSlice(masterDigest)
-				masterDigest = decryptedMasterDigest
+				internal.ClearByteSlice(seed)
+				seed = decryptedSeed
 				break
 			}
 		}
@@ -204,9 +204,9 @@ as it is safer since commands are saved in bash history.`,
 
 		var password string
 		if newIdentification.PasswordDerivationVersion == 1 {
-			password = internal.DeterminePassword(masterDigest, []byte(website), []byte{}, newIdentification.PasswordLength, newIdentification.Round, unallowedCharacters)
+			password = internal.DeterminePassword(seed, []byte(website), []byte{}, newIdentification.PasswordLength, newIdentification.Round, unallowedCharacters)
 		} else {
-			password = internal.DeterminePassword(masterDigest, []byte(website), []byte(user), newIdentification.PasswordLength, newIdentification.Round, unallowedCharacters)
+			password = internal.DeterminePassword(seed, []byte(website), []byte(user), newIdentification.PasswordLength, newIdentification.Round, unallowedCharacters)
 		}
 
 		if generateP.save {

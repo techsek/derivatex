@@ -7,7 +7,7 @@ const ArgonTimeCost uint32 = 5000
 const ArgonParallelism uint8 = 4
 const ArgonTestRounds uint32 = 100
 
-const MasterDigestFilename = "seed.txt"
+const SeedFilename = "seed.txt"
 const DefaultPasswordLength = 20
 const DatabaseFilename = "database.sqlite"
 const DefaultTableToDump = "identifications"
