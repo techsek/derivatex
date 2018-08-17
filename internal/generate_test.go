@@ -224,7 +224,7 @@ func Test_DeterminePassword(t *testing.T) {
 			50,
 			1,
 			unallowedCharactersType{},
-			`I7AlJ{/Ly69*qY~)V_O64N~k6a<mYp}9R~*x2a?p0P7w6y1NIr`,
+			`zX'l+6WYyx.e&8G8>647sKmn93AV^Jb]d_1Zz3K.-y7Z*j4Z,H`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
@@ -251,22 +251,22 @@ func Test_DeterminePassword(t *testing.T) {
 			50,
 			1,
 			unallowedCharactersType{},
-			`uT6AA,;l_bYe..5ly]4|n0g\D1tST39q4W!vH18E-?VuP78:iK`,
+			`oqYKMuD6~525H/X"8Y5qf@~irQDn,y#{7Zea*54s+M85Hg^7'B`,
 		},
 		{
 			[]byte{17, 5, 2, 85, 178, 255, 0, 29},
 			[]byte("google"),
-			[]byte("b@b.com"),
+			[]byte("b@a.com"),
 			50,
 			1,
 			unallowedCharactersType{},
-			`G;we2320ABKq2A12bD"w}XjS38J'jH~=tyI0gyj>#3oX:]8(}V`,
+			`JW7Q5#,r9$@^s778oxHI29k78dKsix"/!h;wI}:90KsVRZdO|H`,
 		},
 	}
 	for _, c := range cases {
 		out := DeterminePassword(&c.seed, c.websiteName, c.user, c.passwordLength, c.round, c.unallowedCharacters)
 		if out != c.password {
-			t.Errorf("byteAsciiType(%v, %s, %d) == %s want %s", c.seed, string(c.websiteName), c.passwordLength, out, c.password)
+			t.Errorf("DeterminePassword(%v, %s, %s, %d) == %s want %s", c.seed, string(c.websiteName), string(c.user), c.passwordLength, out, c.password)
 		}
 	}
 }
