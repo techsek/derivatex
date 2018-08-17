@@ -35,7 +35,7 @@ func init() {
 
 var createCmd = &cobra.Command{
 	Use:   "create",
-	Short: "Create the master digest",
+	Short: "Create the seed file",
 	Long: `Create the master password digest. By default this runs interactively
 as it is safer since commands are saved in bash history.`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -205,7 +205,7 @@ as it is safer since commands are saved in bash history.`,
 			}
 		}
 
-		color.HiWhite("Computing master digest...")
+		color.HiWhite("Computing seed...")
 		// Launch progress bar
 		stopchan := make(chan struct{})
 		stoppedchan := make(chan struct{})
@@ -239,29 +239,29 @@ as it is safer since commands are saved in bash history.`,
 		internal.ClearByteArray32(birthdateSHA3)
 		close(stopchan) // stop the progress bar
 		<-stoppedchan   // wait for it to stop
-		color.HiGreen("Master digest computed successfully")
+		color.HiGreen("Seed computed successfully")
 
 		if protection == "pin" {
 			internal.Checksumize(seed)
 			var decryptedSeed *[]byte
 			decryptedSeed, err := internal.EncryptAES(seed, pinCodeSHA3)
 			if err != nil {
-				color.HiRed("The following error occurred when encrypting the master digest: " + err.Error())
+				color.HiRed("The following error occurred when encrypting the seed: " + err.Error())
 				return
 			}
 			seed = decryptedSeed
 			internal.ClearByteArray32(pinCodeSHA3)
-			color.HiGreen("\nMaster digest encrypted using PIN code successfully")
+			color.HiGreen("\nSeed encrypted using PIN code successfully")
 		}
 
 		// TODO Yubikey with https://github.com/marshallbrekka/go-u2fhost
 		err := internal.WriteSeed(user, protection, seed)
 		internal.ClearByteSlice(seed)
 		if err != nil {
-			color.HiRed("Error writing master digest to file: " + err.Error())
+			color.HiRed("Error writing seed to file: " + err.Error())
 			return
 		}
-		color.HiGreen("Master digest saved successfully!")
+		color.HiGreen("Seed saved successfully!")
 	},
 }
 

@@ -75,8 +75,8 @@ func (identification *IdentificationType) GenerationParamsEqualTo(other *Identif
 		identification.PasswordDerivationVersion == other.PasswordDerivationVersion
 }
 
-func (identification *IdentificationType) IsDefault(defaultUser bool) bool {
-	return defaultUser &&
+func (identification *IdentificationType) HasDefaultParams(userIsDefault bool) bool {
+	return userIsDefault &&
 		identification.PasswordLength == constants.DefaultPasswordLength &&
 		identification.Round == 1 &&
 		identification.UnallowedCharacters == "" &&
@@ -295,6 +295,23 @@ func DisplayIdentificationsCLI(identifications []IdentificationType) {
 			row = append(row, cast.ToString(value.Field(i).Interface()))
 		}
 		table.Append(row)
+	}
+	table.Render()
+}
+
+func ExtractUsers(identifications []IdentificationType) (users []string) {
+	for _, identification := range identifications {
+		users = append(users, identification.User)
+	}
+	return users
+}
+
+func DisplaySingleColumnCLI(title string, users []string) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetColWidth(0)
+	table.SetHeader([]string{title})
+	for _, user := range users {
+		table.Append([]string{user})
 	}
 	table.Render()
 }

@@ -188,7 +188,7 @@ The following list of situations goes from most likely to happen to most unlikel
     cd /your/safe/path/
     ```
 
-1. Create your master digest
+1. Create your seed
 
     ```bash
     derivatex create

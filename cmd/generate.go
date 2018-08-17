@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/atotto/clipboard"
@@ -56,10 +57,9 @@ func init() {
 
 var generateCmd = &cobra.Command{
 	Use:   "generate <websitename>",
-	Short: "Create the master digest",
-	Long: `Create the master password digest. By default this runs interactively
-as it is safer since commands are saved in bash history.`,
-	Args: cobra.ExactArgs(1),
+	Short: "Generate a password using the seed",
+	Long:  `Generate a password for a particular website and user using the seed`,
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		website := args[0]
 		unallowedCharacters := internal.BuildUnallowedCharacters(generateP.noSymbol, generateP.noDigit, generateP.noUppercase, generateP.noLowercase, generateP.excludedCharacters)
@@ -69,7 +69,7 @@ as it is safer since commands are saved in bash history.`,
 		}
 		defaultUser, protection, seed, err := internal.ReadSeed()
 		if err != nil {
-			color.Yellow("An error occurred reading the master digest file: " + err.Error())
+			color.Yellow("An error occurred reading the seed file: " + err.Error())
 			return
 		}
 		if protection == "pin" && generateP.pinCode != "" { // pinCode provided as argument
@@ -92,16 +92,18 @@ as it is safer since commands are saved in bash history.`,
 			err = internal.Dechecksumize(decryptedSeed)
 			if err != nil {
 				internal.ClearByteSlice(decryptedSeed)
-				color.HiRed("Master digest or PIN Code is invalid - " + err.Error())
+				color.HiRed("Seed or PIN Code is invalid - " + err.Error())
 				return
 			}
 			internal.ClearByteSlice(seed)
 			seed = decryptedSeed
 		}
 
+		userIsDefault := true
 		user := defaultUser
 		if generateP.user != "" { // user flag provided
 			user = generateP.user
+			userIsDefault = false
 		}
 
 		newIdentification := internal.IdentificationType{
@@ -114,63 +116,123 @@ as it is safer since commands are saved in bash history.`,
 			PasswordDerivationVersion: uint16(generateP.passwordDerivationVersion),
 			Note: generateP.note,
 		}
+		identificationIsNew := true
+		identificationExists := false
+		replaceIdentification := false
 		identifications, err := internal.FindIdentificationsByWebsite(website)
 		if err != nil {
 			color.HiRed("Error reading the database file '" + constants.DatabaseFilename + "' (" + err.Error() + ")")
 			return
 		}
-		var replaceIdentification bool
-		if len(identifications) > 0 {
-			var identificationExists bool
-			for i := range identifications {
-				if newIdentification.User == identifications[i].User { // identification already exists in database
-					identificationExists = true
-					if identifications[i].GenerationParamsEqualTo(&newIdentification) {
-						newIdentification.CreationTime = identifications[i].CreationTime
-					} else {
-						color.HiWhite("A password for the following identification has already been generated previously:")
-						internal.DisplayIdentificationCLI(identifications[i])
-						color.HiWhite("You are trying to create a password with the following identification:")
-						internal.DisplayIdentificationCLI(newIdentification)
-						for {
-							replaceOrOld := internal.ReadInput("Replace the old identification or generate using the old identification? (replace/old) [old]: ")
-							if replaceOrOld == "replace" {
-								replaceIdentification = true
-								break
-							} else if replaceOrOld == "old" || replaceOrOld == "" {
-								newIdentification = identifications[i]
-								break
-							}
-							color.Yellow("Choice '" + replaceOrOld + "' is not a valid. Please try again")
+
+		if len(identifications) == 0 {
+			identificationIsNew = true
+		} else if len(identifications) == 1 {
+			existingIdentification := identifications[0]
+			if newIdentification.User == existingIdentification.User {
+				identificationExists = true
+				if newIdentification.GenerationParamsEqualTo(&existingIdentification) {
+					newIdentification.CreationTime = existingIdentification.CreationTime
+					newIdentification.Note = existingIdentification.Note // TODO
+					identificationIsNew = false
+				} else {
+					color.HiWhite("A password for the following identification has already been generated previously:")
+					internal.DisplayIdentificationCLI(existingIdentification)
+					color.HiWhite("You are trying to create a password with the following settings:")
+					internal.DisplayIdentificationCLI(newIdentification)
+					for {
+						replaceOrOld := internal.ReadInput("Replace the old identification or generate using the old identification? (replace/old) [old]: ")
+						if replaceOrOld == "replace" {
+							replaceIdentification = true
+							identificationIsNew = true
+							break
+						} else if replaceOrOld == "old" || replaceOrOld == "" {
+							newIdentification = existingIdentification
+							identificationIsNew = false
+							break
 						}
+						color.Yellow("Choice '" + replaceOrOld + "' is not valid. Please try again")
+					}
+				}
+			}
+			if !identificationExists && newIdentification.HasDefaultParams(userIsDefault) { // lazy generating
+				newIdentification = identifications[0]
+				identificationIsNew = false
+				color.Yellow("This password is assumed to be generated using the following stored settings:")
+				internal.DisplayIdentificationCLI(newIdentification)
+				color.White("Please add flags to overwrite this default generation.")
+			}
+		} else {
+			var existingIdentification internal.IdentificationType
+			for _, existingIdentification = range identifications {
+				if newIdentification.User == existingIdentification.User {
+					identificationExists = true
+					if newIdentification.GenerationParamsEqualTo(&existingIdentification) {
+						newIdentification.CreationTime = existingIdentification.CreationTime
+						newIdentification.Note = existingIdentification.Note // TODO
+						identificationIsNew = false
 					}
 					break
 				}
 			}
-			if !identificationExists {
-				if len(identifications) == 1 && newIdentification.IsDefault(user == "") { // lazy generating
-					color.Yellow("This password is assumed to be generated for user '" + identifications[0].User + "' using the corresponding stored settings.")
-					newIdentification = identifications[0]
-				} else {
-					color.HiWhite("Password(s) for the following identification(s) have already been generated previously:")
-					internal.DisplayIdentificationsCLI(identifications)
-					for {
-						continueGenerate := internal.ReadInput("Generate a password for '" + website + "' and new user '" + user + "'? (yes/no) [no]: ")
-						if continueGenerate == "yes" {
-							break
-						} else if continueGenerate == "no" || continueGenerate == "" {
-							return
-						}
-						color.Yellow("Choice '" + continueGenerate + "' is not a valid. Please try again")
+			if identificationExists && identificationIsNew { // new generation parameters
+				color.HiWhite("A password for the following identification has already been generated previously:")
+				internal.DisplayIdentificationCLI(existingIdentification)
+				color.HiWhite("You are trying to create a password with the following settings:")
+				internal.DisplayIdentificationCLI(newIdentification)
+				for {
+					replaceOrOld := internal.ReadInput("Replace the old identification or generate using the old identification? (replace/old) [old]: ")
+					if replaceOrOld == "replace" {
+						replaceIdentification = true
+						identificationIsNew = true
+						break
+					} else if replaceOrOld == "old" || replaceOrOld == "" {
+						newIdentification = existingIdentification
+						identificationIsNew = false
+						break
 					}
+					color.Yellow("Choice '" + replaceOrOld + "' is not valid. Please try again")
+				}
+			} else if !identificationExists { // did not find it previously
+				color.HiWhite("Passwords for the following identifications have already been generated previously:")
+				internal.DisplayIdentificationsCLI(identifications)
+				for {
+					newOrOld := internal.ReadInput("Generate a password for '" + website + "' and new user '" + user + "' or use one of the old stored settings? (new/old) [old]: ")
+					if newOrOld == "new" {
+						break
+					} else if newOrOld == "old" || newOrOld == "" {
+						identificationIsNew = false
+						color.White("Please enter one of the following users to choose the corresponding password generation settings:")
+						existingUsers := internal.ExtractUsers(identifications)
+						internal.DisplaySingleColumnCLI("USER", existingUsers)
+						for {
+							chosenUser := internal.ReadInput("User [" + existingUsers[0] + "]: ")
+							if chosenUser == "" {
+								chosenUser = existingUsers[0]
+							}
+							for _, identification := range identifications {
+								if chosenUser == identification.User {
+									newIdentification = identification
+									break
+								}
+							}
+							color.Yellow("User '" + chosenUser + "' is not valid. Please try again")
+						}
+					}
+					color.Yellow("Choice '" + newOrOld + "' is not valid. Please try again")
 				}
 			}
 		}
+
+		if newIdentification.PasswordDerivationVersion != constants.PasswordDerivationVersion {
+			color.HiYellow("This password is generated using the derivation program version " + strconv.FormatUint(uint64(newIdentification.PasswordDerivationVersion), 10) + ", you should change it using the latest version " + strconv.FormatUint(uint64(constants.PasswordDerivationVersion), 10) + " of the current program")
+		}
+
 		if protection == "pin" && generateP.pinCode == "" {
 			var pinCodeSHA3 *[32]byte
 			var decryptedSeed *[]byte
 			for {
-				pinCode, err := internal.ReadSecret("Enter your PIN code to decrypt the master digest: ")
+				pinCode, err := internal.ReadSecret("Enter your PIN code to decrypt the seed: ")
 				if err != nil {
 					color.Yellow("An error occurred reading the PIN code: " + err.Error())
 					continue
@@ -192,7 +254,7 @@ as it is safer since commands are saved in bash history.`,
 				err = internal.Dechecksumize(decryptedSeed)
 				if err != nil {
 					internal.ClearByteSlice(decryptedSeed)
-					color.HiRed("Master digest or PIN Code is invalid - " + err.Error())
+					color.HiRed("Seed or PIN Code is invalid - " + err.Error())
 					continue
 				}
 				internal.ClearByteSlice(seed)
@@ -218,7 +280,11 @@ as it is safer since commands are saved in bash history.`,
 					return
 				}
 			}
-			internal.InsertIdentification(newIdentification)
+			if identificationIsNew {
+				color.HiGreen("Saving new identification and password generation settings in database:")
+				internal.DisplayIdentificationCLI(newIdentification)
+				internal.InsertIdentification(newIdentification)
+			}
 		}
 		if generateP.passwordOnly {
 			fmt.Print(password)
