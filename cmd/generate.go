@@ -101,7 +101,7 @@ as it is safer since commands are saved in bash history.`,
 		}
 
 		user := defaultUser
-		if user != "" { // user flag provided
+		if generateP.user != "" { // user flag provided
 			user = generateP.user
 		}
 
