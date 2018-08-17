@@ -3,9 +3,9 @@ package constants
 // Only used to reconstruct seed from master password and birthdate
 const ArgonMemoryMB uint32 = 512 // the more the better, depending on your machine
 const ArgonDigestSize uint32 = 64
-const ArgonTimeCost uint32 = 5000
+const ArgonTimeCost uint32 = 1000
 const ArgonParallelism uint8 = 4
-const ArgonTestRounds uint32 = 100
+const ArgonTestRounds uint32 = 40
 
 // Argon2ID settings for the optional passphrase to encrypt the seed
 const PassphraseArgonMemoryMB uint32 = 100
