@@ -257,7 +257,8 @@ derivatex help
 
 ### Urgent
 
-- [ ] Replace PIN code with 2 random words passphrase with Argon2id
+- [ ] Encrypt database locally with passphrase if set
+- [x] Replace PIN code with 2 random words passphrase with Argon2id
 - [ ] Interactive CLI command choice when no argument is provided
 - [ ] Rework code with future server in mind
   - [ ] Split secret digest into 2 256-bit halves
