@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strconv"
 	"time"
 
@@ -47,7 +46,6 @@ func init() {
 	generateCmd.Flags().BoolVar(&generateP.noLowercase, "nolowercase", false, "Force the password to contain no lowercase letter")
 	generateCmd.Flags().StringVar(&generateP.excludedCharacters, "exclude", "", "Characters to exclude from the final password")
 	generateCmd.Flags().StringVar(&generateP.note, "note", "", "Extra personal note you want to add")
-	generateCmd.Flags().StringVar(&generateP.pinCode, "pin", "", "4 digits pin code in case the secret digest is encrypted")
 	generateCmd.Flags().BoolVar(&generateP.qrcode, "qr", true, "Display the resulting password as a QR code")
 	generateCmd.Flags().BoolVar(&generateP.clipboard, "clipboard", true, "Copy the resulting password to the clipboard")
 	generateCmd.Flags().BoolVar(&generateP.passwordOnly, "passwordonly", false, "Only display the resulting password (for piping)")
@@ -72,38 +70,32 @@ var generateCmd = &cobra.Command{
 			color.Yellow("An error occurred reading the seed file: " + err.Error())
 			return
 		}
-		if protection == "pin" && generateP.pinCode != "" { // pinCode provided as argument
-			pinCodeBytes := []byte(generateP.pinCode)
-			pinCode := &pinCodeBytes
-			valid, _ := regexp.Match("^[0-9]{4}$", *pinCode)
-			if !valid {
-				internal.ClearByteSlice(pinCode)
-				color.HiRed("The PIN code you entered is not in the valid format.")
-				return
-			}
-			var pinCodeSHA3 = internal.HashAndDestroy(pinCode)
-			decryptedSeed, err := internal.DecryptAES(seed, pinCodeSHA3)
-			internal.ClearByteArray32(pinCodeSHA3)
-			if err != nil {
-				internal.ClearByteSlice(decryptedSeed)
-				color.HiRed("Decryption error: " + err.Error())
-				return
-			}
-			err = internal.Dechecksumize(decryptedSeed)
-			if err != nil {
-				internal.ClearByteSlice(decryptedSeed)
-				color.HiRed("Seed or PIN Code is invalid - " + err.Error())
-				return
-			}
-			internal.ClearByteSlice(seed)
-			seed = decryptedSeed
-		}
 
 		userIsDefault := true
 		user := defaultUser
 		if generateP.user != "" { // user flag provided
 			user = generateP.user
 			userIsDefault = false
+		}
+
+		if protection == "passphrase" { // TODO encrypt/decrypt SQLite
+			for {
+				passphraseBytesPtr, err := internal.ReadSecret("Enter your passphrase to decrypt the seed: ")
+				if err != nil {
+					color.Yellow("An error occurred reading the passphrase: " + err.Error())
+					continue
+				}
+				decryptedSeed, err := internal.DecryptSeed(seed, passphraseBytesPtr)
+				internal.ClearByteSlice(passphraseBytesPtr)
+				if err != nil {
+					internal.ClearByteSlice(decryptedSeed)
+					color.HiRed("Seed or passphrase is invalid: " + err.Error())
+					continue
+				}
+				internal.ClearByteSlice(seed)
+				seed = decryptedSeed
+				break
+			}
 		}
 
 		newIdentification := internal.IdentificationType{
@@ -227,42 +219,6 @@ var generateCmd = &cobra.Command{
 		if newIdentification.PasswordDerivationVersion != constants.PasswordDerivationVersion {
 			color.HiYellow("This password is generated using the derivation program version " + strconv.FormatUint(uint64(newIdentification.PasswordDerivationVersion), 10) + ", you should change it using the latest version " + strconv.FormatUint(uint64(constants.PasswordDerivationVersion), 10) + " of the current program")
 		}
-
-		if protection == "pin" && generateP.pinCode == "" {
-			var pinCodeSHA3 *[32]byte
-			var decryptedSeed *[]byte
-			for {
-				pinCode, err := internal.ReadSecret("Enter your PIN code to decrypt the seed: ")
-				if err != nil {
-					color.Yellow("An error occurred reading the PIN code: " + err.Error())
-					continue
-				}
-				valid, _ := regexp.Match("^[0-9]{4}$", *pinCode)
-				if !valid {
-					internal.ClearByteSlice(pinCode)
-					color.Yellow("The PIN code you entered is not in the valid format.")
-					continue
-				}
-				pinCodeSHA3 = internal.HashAndDestroy(pinCode)
-				decryptedSeed, err = internal.DecryptAES(seed, pinCodeSHA3)
-				internal.ClearByteArray32(pinCodeSHA3)
-				if err != nil {
-					internal.ClearByteSlice(decryptedSeed)
-					color.HiRed("Decryption error: " + err.Error())
-					continue
-				}
-				err = internal.Dechecksumize(decryptedSeed)
-				if err != nil {
-					internal.ClearByteSlice(decryptedSeed)
-					color.HiRed("Seed or PIN Code is invalid - " + err.Error())
-					continue
-				}
-				internal.ClearByteSlice(seed)
-				seed = decryptedSeed
-				break
-			}
-		}
-		generateP.pinCode = ""
 
 		var password string
 		if newIdentification.PasswordDerivationVersion == 1 {

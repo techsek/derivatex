@@ -51,7 +51,7 @@ func DeterminePassword(seed *[]byte, websiteName []byte, user []byte, passwordLe
 
 	// Extends the password using the pseudo random generator, if needed
 	for uint8(len(password)) < passwordLength {
-		password = append(password, byte(rand.Int()%256))
+		password = append(password, byte(randSource.Int63()%256))
 	}
 
 	// Shortens the password from the digest, if needed

@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"regexp"
-	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -11,7 +9,7 @@ import (
 	"github.com/techsek/derivatex/internal"
 
 	"github.com/fatih/color"
-	ps "github.com/nbutton23/zxcvbn-go"
+
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
@@ -26,179 +24,91 @@ var createP createParams
 
 func init() {
 	rootCmd.AddCommand(createCmd)
-
-	createCmd.Flags().StringVar(&createP.masterPassword, "password", "", "Master password to be used to generate the digest file (you should not use this flag for better security)")
-	createCmd.Flags().StringVar(&createP.birthdate, "birthdate", "", "Your birthdate in the format dd/mm/yyyy (you should not use this flag for better security)")
 	createCmd.Flags().StringVar(&createP.defaultUser, "user", "", "Your default user to be used when generating passwords without specifying a particular user")
-	createCmd.Flags().StringVar(&createP.pinCode, "pin", "", "An optional 4 digit code to encrypt your digest file (you should not use this flag for better security)")
 }
 
 var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create the seed file",
-	Long: `Create the master password digest. By default this runs interactively
-as it is safer since commands are saved in bash history.`,
+	Long: `Create the seed.txt file from your master password and birthdate using Argon2ID. 
+	Optionally (recommended) encrypt your seed.txt file with a randomly generated passphrase.
+	This is forced to be run interactively for security reasons.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf(color.HiWhiteString("Detecting performance of machine for Argon2ID..."))
 		argonTimePerRound := internal.GetArgonTimePerRound()              // depends on the machine
 		fmt.Println(color.HiGreenString("%dms/round", argonTimePerRound)) // TODO in goroutine
-
-		var masterPasswordSHA3, birthdateSHA3, pinCodeSHA3 *[32]byte
-		var user string
+		var masterPasswordSHA3, birthdateSHA3 *[32]byte
 		var protection = "none"
-		if createP.masterPassword != "" { // master password provided in argument
-			color.Yellow("Your password was provided as a command line flag, but it is safer to provide it within the interactive command line interface of derivatex.")
-			masterPassword := []byte(createP.masterPassword)
-			safety, message := evaluatePassword(&masterPassword)
-			masterPasswordSHA3 = internal.HashAndDestroy(&masterPassword)
+		for {
+			masterPassword, err := internal.ReadSecret("Enter your master password: ")
+			if err != nil {
+				color.Yellow("An error occurred reading the password: " + err.Error())
+				continue
+			}
+			safety, message := internal.EvaluatePassword(masterPassword)
+			masterPasswordSHA3 = internal.HashAndDestroy(masterPassword)
 			color.HiWhite(message)
 			if safety == 0 {
-				internal.ClearByteArray32(masterPasswordSHA3)
-				color.HiRed("Your password is not safe, please enter a more complicated password.")
-				return
+				color.Yellow("Your password is not safe, please enter a more complicated password.")
+				continue
 			} else if safety == 1 {
-				color.Yellow("Your password is not very safe, you might want to abort (CTRL + C) and use a stronger password")
+				setStrongerPassword := internal.ReadInput("Your password is not very safe, would you like to enter a stronger password? (yes/no) [no]: ")
+				if setStrongerPassword == "yes" {
+					internal.ClearByteArray32(masterPasswordSHA3)
+					continue
+				}
+			} else {
+				color.HiGreen("Your password is very safe, good job!")
 			}
+			masterPasswordConfirm, err := internal.ReadSecret("Enter your master password again: ")
+			if err != nil {
+				color.Yellow("An error occurred reading the password confirmation: " + err.Error())
+				continue
+			}
+			masterPasswordSHA3Confirm := internal.HashAndDestroy(masterPasswordConfirm)
+			if !internal.ByteArrays32Equal(masterPasswordSHA3, masterPasswordSHA3Confirm) {
+				color.Yellow("The passwords entered do not match, please try again.")
+				internal.ClearByteArray32(masterPasswordSHA3)
+				internal.ClearByteArray32(masterPasswordSHA3Confirm)
+				continue
+			}
+			internal.ClearByteArray32(masterPasswordSHA3Confirm)
+			break
 		}
-		if createP.birthdate != "" { // birthdate provided in argument
-			color.Yellow("Your birthdate was provided as a command line flag, but it is safer to provide it within the interactive command line interface of derivatex.")
-			birthdateBytes := []byte(createP.birthdate)
-			var birthdate = &birthdateBytes
-			if !dateIsValid(birthdate) {
-				color.HiRed("The birthdate you entered is not valid.")
+		for {
+			birthdate, err := internal.ReadSecret("Enter your date of birth in the format dd/mm/yyyy: ")
+			if err != nil {
+				color.Yellow("An error occurred reading your birthdate: " + err.Error())
+				continue
+			}
+			if !internal.DateIsValid(birthdate) {
+				color.Yellow("The birthdate you entered is not valid.")
 				internal.ClearByteSlice(birthdate)
-				return
+				continue
 			}
 			birthdateSHA3 = internal.HashAndDestroy(birthdate)
-		}
-		if createP.pinCode != "" { // pin code provided in argument
-			color.Yellow("Your encryption 4 digit code was provided as a command line flag, but it is safer to provide it within the interactive command line interface of Derivatex.")
-			pinCodeBytes := []byte(createP.pinCode)
-			pinCode := &pinCodeBytes
-			protection = "pin"
-			valid, _ := regexp.Match("^[0-9]{4}$", *pinCode)
-			if !valid {
-				internal.ClearByteSlice(pinCode)
-				color.HiRed("Your 4 digit code is not valid.")
-				return
+			birthdateConfirm, err := internal.ReadSecret("Enter your date of birth in the format dd/mm/yyyy again: ")
+			if err != nil {
+				color.Yellow("An error occurred reading your birthdate confirmation: " + err.Error())
+				internal.ClearByteArray32(birthdateSHA3)
+				continue
 			}
-			pinCodeSHA3 = internal.HashAndDestroy(pinCode)
+			birthdateSHA3Confirm := internal.HashAndDestroy(birthdateConfirm)
+			if !internal.ByteArrays32Equal(birthdateSHA3, birthdateSHA3Confirm) {
+				color.Yellow("The birthdates entered do not match, please try again.")
+				internal.ClearByteArray32(birthdateSHA3)
+				internal.ClearByteArray32(birthdateSHA3Confirm)
+				continue
+			}
+			color.HiGreen("Your birthdate is valid.")
+			break
 		}
 
-		if createP.masterPassword == "" { // master password to be provided interactively
+		if createP.defaultUser == "" {
 			for {
-				masterPassword, err := internal.ReadSecret("Enter your master password: ")
-				if err != nil {
-					color.Yellow("An error occurred reading the password: " + err.Error())
-					continue
-				}
-				safety, message := evaluatePassword(masterPassword)
-				masterPasswordSHA3 = internal.HashAndDestroy(masterPassword)
-				color.HiWhite(message)
-				if safety == 0 {
-					color.Yellow("Your password is not safe, please enter a more complicated password.")
-					continue
-				} else if safety == 1 {
-					setStrongerPassword := internal.ReadInput("Your password is not very safe, would you like to enter a stronger password? (yes/no) [no]: ")
-					if setStrongerPassword == "yes" {
-						internal.ClearByteArray32(masterPasswordSHA3)
-						continue
-					}
-				} else {
-					color.HiGreen("Your password is very safe, good job!")
-				}
-				masterPasswordConfirm, err := internal.ReadSecret("Enter your master password again: ")
-				if err != nil {
-					color.Yellow("An error occurred reading the password confirmation: " + err.Error())
-					continue
-				}
-				masterPasswordSHA3Confirm := internal.HashAndDestroy(masterPasswordConfirm)
-				if !internal.ByteArrays32Equal(masterPasswordSHA3, masterPasswordSHA3Confirm) {
-					color.Yellow("The passwords entered do not match, please try again.")
-					internal.ClearByteArray32(masterPasswordSHA3)
-					internal.ClearByteArray32(masterPasswordSHA3Confirm)
-					continue
-				}
-				internal.ClearByteArray32(masterPasswordSHA3Confirm)
-				break
-			}
-		}
-		createP.masterPassword = ""
-
-		if createP.birthdate == "" { // birthdate to be provided interactively
-			for {
-				birthdate, err := internal.ReadSecret("Enter your date of birth in the format dd/mm/yyyy: ")
-				if err != nil {
-					color.Yellow("An error occurred reading your birthdate: " + err.Error())
-					continue
-				}
-				if !dateIsValid(birthdate) {
-					color.Yellow("The birthdate you entered is not valid.")
-					internal.ClearByteSlice(birthdate)
-					continue
-				}
-				birthdateSHA3 = internal.HashAndDestroy(birthdate)
-				birthdateConfirm, err := internal.ReadSecret("Enter your date of birth in the format dd/mm/yyyy again: ")
-				if err != nil {
-					color.Yellow("An error occurred reading your birthdate confirmation: " + err.Error())
-					internal.ClearByteArray32(birthdateSHA3)
-					continue
-				}
-				birthdateSHA3Confirm := internal.HashAndDestroy(birthdateConfirm)
-				if !internal.ByteArrays32Equal(birthdateSHA3, birthdateSHA3Confirm) {
-					color.Yellow("The birthdates entered do not match, please try again.")
-					internal.ClearByteArray32(birthdateSHA3)
-					internal.ClearByteArray32(birthdateSHA3Confirm)
-					continue
-				}
-				color.HiGreen("Your birthdate is valid.")
-				break
-			}
-		}
-		createP.birthdate = ""
-
-		if createP.pinCode == "" { // pin code to be provided interactively (optional)
-			optionPin := internal.ReadInput("[OPTIONAL] To generate a password, would you like to setup a 4 digit pin code? (yes/no) [no]: ")
-			if optionPin == "yes" {
-				protection = "pin"
-				for {
-					pinCode, err := internal.ReadSecret("Please choose your PIN code in the format 9999: ")
-					if err != nil {
-						color.Yellow("An error occurred reading the PIN code: " + err.Error())
-						continue
-					}
-					valid, _ := regexp.Match("^[0-9]{4}$", *pinCode)
-					if !valid {
-						color.Yellow("The PIN code you entered is not valid.")
-						internal.ClearByteSlice(pinCode)
-						continue
-					}
-					pinCodeSHA3 = internal.HashAndDestroy(pinCode)
-					pinCodeConfirm, err := internal.ReadSecret("Please confirm your PIN code in the format 9999: ")
-					if err != nil {
-						color.Yellow("An error occurred reading the PIN code confirmation: " + err.Error())
-						continue
-					}
-					pinCodeSHA3Confirm := internal.HashAndDestroy(pinCodeConfirm)
-					if !internal.ByteArrays32Equal(pinCodeSHA3, pinCodeSHA3Confirm) {
-						color.Yellow("The PIN codes entered do not match, please try again.")
-						internal.ClearByteArray32(pinCodeSHA3)
-						internal.ClearByteArray32(pinCodeSHA3Confirm)
-						continue
-					}
-					break
-				}
-			}
-		}
-		createP.pinCode = ""
-
-		user = createP.defaultUser
-		createP.defaultUser = ""
-		if user == "" {
-			for {
-				user = internal.ReadInput("Enter your default user (i.e. email@domain.com): ")
-				if user == "" {
-					color.Yellow("Please enter a non-empty user")
+				createP.defaultUser = internal.ReadInput("Enter your default user (i.e. email@domain.com): ")
+				if createP.defaultUser == "" {
+					color.Yellow("Please enter a user and try again.")
 					continue
 				}
 				break
@@ -241,21 +151,53 @@ as it is safer since commands are saved in bash history.`,
 		<-stoppedchan   // wait for it to stop
 		color.HiGreen("Seed computed successfully")
 
-		if protection == "pin" {
-			internal.Checksumize(seed)
-			var decryptedSeed *[]byte
-			decryptedSeed, err := internal.EncryptAES(seed, pinCodeSHA3)
-			if err != nil {
-				color.HiRed("The following error occurred when encrypting the seed: " + err.Error())
-				return
+		color.HiWhite("To generate a password, would you like to add one of the following securities:")
+		fmt.Println("A: Randomly picked adjective and noun passphrase " + color.HiGreenString("(recommended)"))
+		fmt.Println("B: Your own passphrase " + color.HiYellowString("(not recommended unless you know what you are doing)"))
+		fmt.Println("C: None " + color.HiRedString("(not recommended unless you seed.txt is safe at all time)"))
+		color.White(`For choices A and B, your seed and identifications database will be encrypted by AES
+using a 256 bit key generated by Argon2ID from the passphrase. You will need that passphrase to do any further operation.`)
+		for {
+			protectionOption := internal.ReadInput("Please enter an additional security option [A]: ")
+			if protectionOption == "A" || protectionOption == "" || protectionOption == "B" {
+				protection = "passphrase"
+				var passphrase string
+				var err error
+				if protectionOption == "A" || protectionOption == "" {
+					for {
+						passphrase, err = internal.MakePassphrase()
+						if err != nil {
+							color.Yellow("An error occurred when generating the passphrase: " + err.Error())
+							continue
+						}
+						fmt.Println("Your generated passphrase is: " + color.HiGreenString(passphrase))
+						anotherOne := internal.ReadInput("Would you prefer another passphrase? (yes/no) [yes]: ")
+						if anotherOne == "" || anotherOne == "yes" {
+							continue
+						} else if anotherOne == "no" {
+							break
+						}
+						color.Yellow("The answer '" + anotherOne + "' is not valid. Please try again.")
+					}
+				} else if protectionOption == "B" {
+					passphrase = internal.ReadInput("Enter your passphrase: ")
+				}
+				passphraseBytes := []byte(passphrase)
+				encryptedSeed, err := internal.EncryptSeed(seed, &passphraseBytes)
+				if err != nil {
+					color.HiRed("The following error occurred when encrypting the seed: " + err.Error())
+					return
+				}
+				internal.ClearByteSlice(seed)
+				seed = encryptedSeed
+				color.HiGreen("Seed encrypted using passphrase successfully.")
+				break
+			} else if protectionOption == "C" {
+				break
 			}
-			seed = decryptedSeed
-			internal.ClearByteArray32(pinCodeSHA3)
-			color.HiGreen("\nSeed encrypted using PIN code successfully")
+			color.Yellow("Option '" + protectionOption + "' is not valid. Please try again.")
 		}
-
-		// TODO Yubikey with https://github.com/marshallbrekka/go-u2fhost
-		err := internal.WriteSeed(user, protection, seed)
+		err := internal.WriteSeed(createP.defaultUser, protection, seed)
 		internal.ClearByteSlice(seed)
 		if err != nil {
 			color.HiRed("Error writing seed to file: " + err.Error())
@@ -263,25 +205,4 @@ as it is safer since commands are saved in bash history.`,
 		}
 		color.HiGreen("Seed saved successfully!")
 	},
-}
-
-func dateIsValid(date *[]byte) bool {
-	_, err := time.Parse("02/01/2006", string(*date))
-	if err != nil {
-		return false
-	}
-	return true
-}
-
-func evaluatePassword(masterPassword *[]byte) (safety uint8, message string) {
-	analysis := ps.PasswordStrength(string(*masterPassword), []string{})
-	// TODO find cracktime
-	message = "Your password has an entropy of " + strconv.FormatFloat(analysis.Entropy, 'f', 2, 64) + " bits, equivalent to a suitcase lock of " + strconv.FormatFloat(analysis.Entropy*0.30103, 'f', 0, 64) + " digits."
-	if analysis.Entropy > 30 {
-		safety = 1
-	}
-	if analysis.Entropy > 50 {
-		safety = 2
-	}
-	return safety, message
 }

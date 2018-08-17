@@ -8,7 +8,9 @@ import (
 	"io"
 )
 
-func EncryptAES(plaintext *[]byte, key *[32]byte) (ciphertext *[]byte, err error) {
+type ioReadFullFunc func(r io.Reader, buf []byte) (n int, err error)
+
+func EncryptAES(plaintext *[]byte, key *[32]byte, ioReadFull ioReadFullFunc) (ciphertext *[]byte, err error) {
 	block, err := aes.NewCipher((*key)[:])
 	if err != nil {
 		return nil, err
@@ -16,7 +18,7 @@ func EncryptAES(plaintext *[]byte, key *[32]byte) (ciphertext *[]byte, err error
 	ciphertext = new([]byte)
 	*ciphertext = make([]byte, aes.BlockSize+len(*plaintext))
 	iv := (*ciphertext)[:aes.BlockSize]
-	_, err = io.ReadFull(rand.Reader, iv)
+	_, err = ioReadFull(rand.Reader, iv)
 	if err != nil {
 		return nil, err
 	}
