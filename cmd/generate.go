@@ -56,10 +56,9 @@ func init() {
 
 var generateCmd = &cobra.Command{
 	Use:   "generate <websitename>",
-	Short: "Create the master digest",
-	Long: `Create the master password digest. By default this runs interactively
-as it is safer since commands are saved in bash history.`,
-	Args: cobra.ExactArgs(1),
+	Short: "Generate a password using the seed",
+	Long:  `Generate a password for a particular website and user using the seed`,
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		website := args[0]
 		unallowedCharacters := internal.BuildUnallowedCharacters(generateP.noSymbol, generateP.noDigit, generateP.noUppercase, generateP.noLowercase, generateP.excludedCharacters)
@@ -69,7 +68,7 @@ as it is safer since commands are saved in bash history.`,
 		}
 		defaultUser, protection, seed, err := internal.ReadSeed()
 		if err != nil {
-			color.Yellow("An error occurred reading the master digest file: " + err.Error())
+			color.Yellow("An error occurred reading the seed file: " + err.Error())
 			return
 		}
 		if protection == "pin" && generateP.pinCode != "" { // pinCode provided as argument
@@ -92,7 +91,7 @@ as it is safer since commands are saved in bash history.`,
 			err = internal.Dechecksumize(decryptedSeed)
 			if err != nil {
 				internal.ClearByteSlice(decryptedSeed)
-				color.HiRed("Master digest or PIN Code is invalid - " + err.Error())
+				color.HiRed("Seed or PIN Code is invalid - " + err.Error())
 				return
 			}
 			internal.ClearByteSlice(seed)
@@ -170,7 +169,7 @@ as it is safer since commands are saved in bash history.`,
 			var pinCodeSHA3 *[32]byte
 			var decryptedSeed *[]byte
 			for {
-				pinCode, err := internal.ReadSecret("Enter your PIN code to decrypt the master digest: ")
+				pinCode, err := internal.ReadSecret("Enter your PIN code to decrypt the seed: ")
 				if err != nil {
 					color.Yellow("An error occurred reading the PIN code: " + err.Error())
 					continue
@@ -192,7 +191,7 @@ as it is safer since commands are saved in bash history.`,
 				err = internal.Dechecksumize(decryptedSeed)
 				if err != nil {
 					internal.ClearByteSlice(decryptedSeed)
-					color.HiRed("Master digest or PIN Code is invalid - " + err.Error())
+					color.HiRed("Seed or PIN Code is invalid - " + err.Error())
 					continue
 				}
 				internal.ClearByteSlice(seed)

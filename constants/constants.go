@@ -1,6 +1,6 @@
 package constants
 
-// Only used to reconstruct master digest from master password and birthdate
+// Only used to reconstruct seed from master password and birthdate
 const ArgonMemoryMB uint32 = 512 // the more the better, depending on your machine
 const ArgonDigestSize uint32 = 64
 const ArgonTimeCost uint32 = 5000
