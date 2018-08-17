@@ -39,14 +39,14 @@ func InitiateDatabaseIfNeeded() (err error) {
 }
 
 type IdentificationType struct {
-	Website             string
-	User                string
-	PasswordLength      uint8 // max 255 otherwise it's ridiculous
-	Round               uint16
-	UnallowedCharacters string
-	CreationTime        int64
-	ProgramVersion      uint16
-	Note                string
+	Website                   string
+	User                      string
+	PasswordLength            uint8 // max 255 otherwise it's ridiculous
+	Round                     uint16
+	UnallowedCharacters       string
+	CreationTime              int64
+	PasswordDerivationVersion uint16
+	Note                      string
 }
 
 func IdentificationTypeLegendStrings() []string {
@@ -61,7 +61,7 @@ func (identification *IdentificationType) ToStrings() []string {
 		strconv.FormatUint(uint64(identification.Round), 10),
 		identification.UnallowedCharacters,
 		time.Unix(identification.CreationTime, 0).Format("02/01/2006"),
-		strconv.FormatUint(uint64(identification.ProgramVersion), 10),
+		strconv.FormatUint(uint64(identification.PasswordDerivationVersion), 10),
 		identification.Note,
 	}
 }
@@ -72,7 +72,7 @@ func (identification *IdentificationType) GenerationParamsEqualTo(other *Identif
 		identification.PasswordLength == other.PasswordLength &&
 		identification.Round == other.Round &&
 		identification.UnallowedCharacters == other.UnallowedCharacters &&
-		identification.ProgramVersion == other.ProgramVersion
+		identification.PasswordDerivationVersion == other.PasswordDerivationVersion
 }
 
 func (identification *IdentificationType) IsDefault(defaultUser bool) bool {
@@ -80,7 +80,7 @@ func (identification *IdentificationType) IsDefault(defaultUser bool) bool {
 		identification.PasswordLength == constants.DefaultPasswordLength &&
 		identification.Round == 1 &&
 		identification.UnallowedCharacters == "" &&
-		identification.ProgramVersion == constants.Version &&
+		identification.PasswordDerivationVersion == constants.PasswordDerivationVersion &&
 		identification.Note == ""
 }
 
@@ -103,7 +103,7 @@ func FindIdentificationsByWebsite(website string) (identifications []Identificat
 			&identification.Round,
 			&identification.UnallowedCharacters,
 			&identification.CreationTime,
-			&identification.ProgramVersion,
+			&identification.PasswordDerivationVersion,
 			&identification.Note,
 		)
 		if err != nil {
@@ -132,7 +132,7 @@ func FindIdentification(website string, user string) (identification Identificat
 			&identification.Round,
 			&identification.UnallowedCharacters,
 			&identification.CreationTime,
-			&identification.ProgramVersion,
+			&identification.PasswordDerivationVersion,
 			&identification.Note,
 		)
 		if err != nil {
@@ -147,7 +147,7 @@ func InsertIdentification(identification IdentificationType) (err error) {
 	if err != nil {
 		return err
 	}
-	_, err = statement.Exec(identification.Website, identification.User, identification.PasswordLength, identification.Round, identification.UnallowedCharacters, identification.CreationTime, identification.ProgramVersion, identification.Note)
+	_, err = statement.Exec(identification.Website, identification.User, identification.PasswordLength, identification.Round, identification.UnallowedCharacters, identification.CreationTime, identification.PasswordDerivationVersion, identification.Note)
 	return err
 }
 
@@ -177,7 +177,7 @@ func SearchIdentifications(query string, searchWebsites, searchUsers bool) (iden
 			&identification.Round,
 			&identification.UnallowedCharacters,
 			&identification.CreationTime,
-			&identification.ProgramVersion,
+			&identification.PasswordDerivationVersion,
 			&identification.Note,
 		)
 		if err != nil {
@@ -208,7 +208,7 @@ func DumpTable(tableName string, outputfilename string) error {
 			&identification.Round,
 			&identification.UnallowedCharacters,
 			&identification.CreationTime,
-			&identification.ProgramVersion,
+			&identification.PasswordDerivationVersion,
 			&identification.Note,
 		)
 		if err != nil {
@@ -260,7 +260,7 @@ func GetAllIdentifications(startTime, endTime int64, user string) (identificatio
 			&identification.Round,
 			&identification.UnallowedCharacters,
 			&identification.CreationTime,
-			&identification.ProgramVersion,
+			&identification.PasswordDerivationVersion,
 			&identification.Note,
 		)
 		if err != nil {
@@ -269,6 +269,19 @@ func GetAllIdentifications(startTime, endTime int64, user string) (identificatio
 		identifications = append(identifications, identification)
 	}
 	return identifications, nil
+}
+
+func DisplayIdentificationCLI(identification IdentificationType) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetColWidth(0)
+	table.SetHeader(IdentificationTypeLegendStrings())
+	value := reflect.ValueOf(identification)
+	var row []string
+	for i := 0; i < value.NumField(); i++ {
+		row = append(row, cast.ToString(value.Field(i).Interface()))
+	}
+	table.Append(row)
+	table.Render()
 }
 
 func DisplayIdentificationsCLI(identifications []IdentificationType) {

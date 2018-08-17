@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/atotto/clipboard"
@@ -16,21 +15,21 @@ import (
 )
 
 type generateParams struct {
-	passwordLength     int
-	user               string
-	round              int
-	note               string
-	excludedCharacters string
-	noSymbol           bool
-	noDigit            bool
-	noUppercase        bool
-	noLowercase        bool
-	pinCode            string
-	qrcode             bool
-	clipboard          bool
-	passwordOnly       bool
-	save               bool
-	programVersion     int
+	passwordLength            int
+	user                      string
+	round                     int
+	note                      string
+	excludedCharacters        string
+	noSymbol                  bool
+	noDigit                   bool
+	noUppercase               bool
+	noLowercase               bool
+	pinCode                   string
+	qrcode                    bool
+	clipboard                 bool
+	passwordOnly              bool
+	save                      bool
+	PasswordDerivationVersion int
 }
 
 var generateP generateParams
@@ -52,7 +51,7 @@ func init() {
 	generateCmd.Flags().BoolVar(&generateP.clipboard, "clipboard", true, "Copy the resulting password to the clipboard")
 	generateCmd.Flags().BoolVar(&generateP.passwordOnly, "passwordonly", false, "Only display the resulting password (for piping)")
 	generateCmd.Flags().BoolVar(&generateP.save, "save", true, "Save the password generation settings and corresponding user to the database")
-	generateCmd.Flags().IntVar(&generateP.programVersion, "version", constants.Version, "Version of the core password generation code to be used")
+	generateCmd.Flags().IntVar(&generateP.passwordDerivationVersion, "version", constants.PasswordDerivationVersion, "Version of the core password generation code to be used")
 }
 
 var generateCmd = &cobra.Command{
@@ -106,14 +105,14 @@ as it is safer since commands are saved in bash history.`,
 		}
 
 		newIdentification := internal.IdentificationType{
-			Website:             website,
-			User:                user,
-			PasswordLength:      uint8(generateP.passwordLength),
-			Round:               uint16(generateP.round),
-			UnallowedCharacters: unallowedCharacters.Serialize(),
-			CreationTime:        time.Now().Unix(), // set to previous database record if a record is found
-			ProgramVersion:      uint16(generateP.programVersion),
-			Note:                generateP.note,
+			Website:                   website,
+			User:                      user,
+			PasswordLength:            uint8(generateP.passwordLength),
+			Round:                     uint16(generateP.round),
+			UnallowedCharacters:       unallowedCharacters.Serialize(),
+			CreationTime:              time.Now().Unix(), // set to previous database record if a record is found
+			PasswordDerivationVersion: uint16(generateP.passwordDerivationVersion),
+			Note: generateP.note,
 		}
 		identifications, err := internal.FindIdentificationsByWebsite(website)
 		if err != nil {
@@ -130,11 +129,9 @@ as it is safer since commands are saved in bash history.`,
 						newIdentification.CreationTime = identifications[i].CreationTime
 					} else {
 						color.HiWhite("A password for the following identification has already been generated previously:")
-						color.White(strings.Join(internal.IdentificationTypeLegendStrings(), " | "))
-						color.White(strings.Join(identifications[i].ToStrings(), " | "))
+						internal.DisplayIdentificationCLI(identifications[i])
 						color.HiWhite("You are trying to create a password with the following identification:")
-						color.White(strings.Join(internal.IdentificationTypeLegendStrings(), " | "))
-						color.White(strings.Join(newIdentification.ToStrings(), " | "))
+						internal.DisplayIdentificationCLI(newIdentification)
 						for {
 							replaceOrOld := internal.ReadInput("Replace the old identification or generate using the old identification? (replace/old) [old]: ")
 							if replaceOrOld == "replace" {
@@ -206,7 +203,7 @@ as it is safer since commands are saved in bash history.`,
 		generateP.pinCode = ""
 
 		var password string
-		if newIdentification.ProgramVersion == 1 {
+		if newIdentification.PasswordDerivationVersion == 1 {
 			password = internal.DeterminePassword(masterDigest, []byte(website), []byte{}, newIdentification.PasswordLength, newIdentification.Round, unallowedCharacters)
 		} else {
 			password = internal.DeterminePassword(masterDigest, []byte(website), []byte(user), newIdentification.PasswordLength, newIdentification.Round, unallowedCharacters)
