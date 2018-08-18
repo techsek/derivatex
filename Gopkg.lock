@@ -108,6 +108,14 @@
   version = "v0.1.0"
 
 [[projects]]
+  digest = "1:2e8a205727a065f79ee17d04ce54b8e5c18268241835843e6799497f445738c8"
+  name = "github.com/sahilm/fuzzy"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "df93d96a0fd86b97655b90f63c70802b4e793afb"
+  version = "v0.0.5"
+
+[[projects]]
   digest = "1:516e71bed754268937f57d4ecb190e01958452336fa73dbac880894164e91c1f"
   name = "github.com/spf13/cast"
   packages = ["."]
@@ -186,6 +194,7 @@
     "github.com/mdp/qrterminal",
     "github.com/nbutton23/zxcvbn-go",
     "github.com/olekukonko/tablewriter",
+    "github.com/sahilm/fuzzy",
     "github.com/spf13/cast",
     "github.com/spf13/cobra",
     "golang.org/x/crypto/argon2",
