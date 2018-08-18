@@ -10,6 +10,14 @@
   revision = "5e2c7bddca04488284428a201e4a15615f7a5074"
 
 [[projects]]
+  digest = "1:076cc4756ef05aa1a9e6d45864b0a06d0f17e684d4101bb768f6f4b6cc340445"
+  name = "github.com/castillobgr/sententia"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "9b04b4a53625e6af0b410a8ab124492442535e65"
+  version = "v2.0"
+
+[[projects]]
   digest = "1:865079840386857c809b72ce300be7580cb50d3d3129ce11bf9aa6ca2bc1934a"
   name = "github.com/fatih/color"
   packages = ["."]
@@ -172,6 +180,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/atotto/clipboard",
+    "github.com/castillobgr/sententia",
     "github.com/fatih/color",
     "github.com/mattn/go-sqlite3",
     "github.com/mdp/qrterminal",
