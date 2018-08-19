@@ -257,15 +257,16 @@ derivatex help
 
 ### Urgent
 
-- [ ] Encrypt database locally with passphrase if set
-- [x] Replace PIN code with 2 random words passphrase with Argon2id
-- [ ] Interactive CLI command choice when no argument is provided
 - [ ] Rework code with future server in mind
   - [ ] Split secret digest into 2 256-bit halves
   - [ ] Do SHA 256 of (website+user)
 - [ ] Rework code for language portability
   - [ ] Understand rand.Seed or use something else in password generation
+- [ ] Show age in days instead of creation time
+- [ ] Interactive CLI command choice when no argument is provided
+- [ ] Encrypt database locally with passphrase if set
 - [ ] Log file
+- [x] Replace PIN code with 2 random words passphrase with Argon2id
 - [ ] Rework CLI with [urface/cli](https://github.com/urfave/cli)
 
 ### Documentation
