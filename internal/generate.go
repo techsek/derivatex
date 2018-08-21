@@ -8,6 +8,16 @@ import (
 	"github.com/techsek/derivatex/constants"
 )
 
+func MakePasswordDigest(clientSeed *[]byte, website, user string, passwordDerivationVersion uint16) (passwordDigest *[32]byte) {
+	input := new([]byte)
+	*input = append(*clientSeed, []byte(website)...)
+	if passwordDerivationVersion > 1 {
+		*input = append(*input, []byte(user)...)
+	}
+	passwordDigest = HashAndDestroy(input) // TODO homomorphic sha3 256 on server with serverSeed+clientSeed
+	return passwordDigest
+}
+
 type asciiType uint8
 
 const (
@@ -32,19 +42,15 @@ var (
 
 type unallowedCharactersType map[asciiType]string
 
-func DeterminePassword(seed *[]byte, websiteName []byte, user []byte, passwordLength uint8, round uint16, unallowedCharacters unallowedCharactersType) string {
-	input := new([]byte)
-	*input = append(*seed, websiteName...)
-	*input = append(*input, user...)
-	digest := HashAndDestroy(input) // 32 ASCII characters
+func SatisfyPassword(passwordDigest *[32]byte, passwordLength uint8, round uint16, unallowedCharacters unallowedCharactersType) string {
 	// Rounds of password (to renew password, in example)
 	var digestSlicePtr = new([]byte)
 	var k uint16
 	for k = 1; k < round; k++ {
-		*digestSlicePtr = (*digest)[:]
-		digest = HashSHA3_256(digestSlicePtr) // additional SHA3 for more rounds
+		*digestSlicePtr = (*passwordDigest)[:]
+		passwordDigest = HashSHA3_256(digestSlicePtr) // additional SHA3 for more rounds
 	}
-	var password = (*digest)[:]
+	var password = (*passwordDigest)[:]
 
 	// Pseudo Random generator initialization
 	randSource := rand.NewSource(int64(binary.BigEndian.Uint64(password)))

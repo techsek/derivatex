@@ -76,6 +76,13 @@ var generateCmd = &cobra.Command{
 			user = generateP.user
 			userIsDefault = false
 		}
+		for user == "" { // no default user and no user flag
+			user = internal.ReadInput("User to generate password for: ")
+			if user != "" {
+				break
+			}
+			color.Yellow("Please enter a non empty user.")
+		}
 
 		if protection == "passphrase" { // TODO encrypt/decrypt SQLite
 			for {
@@ -220,12 +227,8 @@ var generateCmd = &cobra.Command{
 		}
 
 		var password string
-		if newIdentification.PasswordDerivationVersion == 1 {
-			password = internal.DeterminePassword(seed, []byte(website), []byte{}, newIdentification.PasswordLength, newIdentification.Round, unallowedCharacters)
-		} else {
-			password = internal.DeterminePassword(seed, []byte(website), []byte(user), newIdentification.PasswordLength, newIdentification.Round, unallowedCharacters)
-		}
-
+		passwordDigest := internal.MakePasswordDigest(seed, website, user, newIdentification.PasswordDerivationVersion)
+		password = internal.SatisfyPassword(passwordDigest, newIdentification.PasswordLength, newIdentification.Round, unallowedCharacters)
 		if generateP.save {
 			// TODO transaction
 			if replaceIdentification {
