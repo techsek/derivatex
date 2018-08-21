@@ -24,7 +24,6 @@ type generateParams struct {
 	noDigit                   bool
 	noUppercase               bool
 	noLowercase               bool
-	pinCode                   string
 	qrcode                    bool
 	clipboard                 bool
 	passwordOnly              bool

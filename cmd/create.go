@@ -14,10 +14,7 @@ import (
 )
 
 type createParams struct {
-	masterPassword string
-	birthdate      string
-	defaultUser    string
-	pinCode        string
+	defaultUser string
 }
 
 var createP createParams
