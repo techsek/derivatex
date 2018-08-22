@@ -257,13 +257,14 @@ derivatex help
 
 ### Urgent
 
-- [ ] Show age in days instead of creation time
-- [ ] Store seed information in database
-- [ ] Rework code with future server in mind
-  - [ ] Split secret digest into 2 256-bit halves
-  - [x] Do SHA 256 of (website+user)
-- [ ] Encrypt database locally with passphrase if set
-- [ ] Log file
+1. [ ] Show age in days instead of creation time
+1. [ ] Work on homomorphic encryption server
+  - [ ] Keccak boolean circuit
+  - [ ] Palisade
+1. [ ] Store seed information in database
+1. [ ] Encrypt database locally with passphrase if set
+1. [ ] E2EE Log file
+
 - [x] Rework code for language portability
   - [x] Understand rand.Seed or use something else in password generation
 - [x] Replace PIN code with 2 random words passphrase with Argon2id
