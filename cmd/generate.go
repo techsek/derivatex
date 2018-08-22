@@ -228,7 +228,7 @@ var generateCmd = &cobra.Command{
 
 		var password string
 		passwordDigest := internal.MakePasswordDigest(seed, website, user, newIdentification.PasswordDerivationVersion)
-		password = internal.SatisfyPassword(passwordDigest, newIdentification.PasswordLength, newIdentification.Round, unallowedCharacters)
+		password = internal.SatisfyPassword(passwordDigest, newIdentification.PasswordLength, newIdentification.Round, unallowedCharacters, newIdentification.PasswordDerivationVersion)
 		if generateP.save {
 			// TODO transaction
 			if replaceIdentification {

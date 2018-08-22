@@ -20,7 +20,7 @@ const DefaultPasswordLength = 20
 const DatabaseFilename = "database.sqlite"
 const DefaultTableToDump = "identifications"
 
-const PasswordDerivationVersion = 2
+const PasswordDerivationVersion = 3
 
 const (
 	Symbols    = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"

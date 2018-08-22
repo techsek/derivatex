@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"math/rand"
 	"reflect"
 	"testing"
 )
@@ -115,66 +114,68 @@ func Test_byteAsciiType(t *testing.T) {
 func Test_shuffleAsciiOrder(t *testing.T) {
 	cases := []struct {
 		asciiOrder         []asciiType
-		randSource         rand.Source
+		randInt            func() int64
 		shuffledASCIIOrder []asciiType
 	}{
 		{
 			[]asciiType{asciiLowercase},
-			rand.NewSource(1),
+			func() int64 { return 1 },
 			[]asciiType{asciiLowercase},
 		},
 		{
 			[]asciiType{asciiLowercase, asciiUppercase},
-			rand.NewSource(0),
+			func() int64 { return 1 },
 			[]asciiType{asciiLowercase, asciiUppercase},
 		},
 		{
 			[]asciiType{asciiLowercase, asciiUppercase},
-			rand.NewSource(1),
+			func() int64 { return 2 },
 			[]asciiType{asciiUppercase, asciiLowercase},
 		},
 		{
 			[]asciiType{asciiLowercase, asciiUppercase, asciiDigit},
-			rand.NewSource(10),
-			[]asciiType{asciiUppercase, asciiDigit, asciiLowercase},
+			func() int64 { return 10 },
+			[]asciiType{asciiDigit, asciiLowercase, asciiUppercase},
 		},
 		{
 			[]asciiType{asciiLowercase, asciiUppercase, asciiSymbol},
-			rand.NewSource(2645),
-			[]asciiType{asciiSymbol, asciiLowercase, asciiUppercase},
+			func() int64 { return 2645 },
+			[]asciiType{asciiLowercase, asciiUppercase, asciiSymbol},
 		},
 		{
 			[]asciiType{asciiLowercase, asciiUppercase, asciiDigit, asciiSymbol},
-			rand.NewSource(0),
-			[]asciiType{asciiDigit, asciiSymbol, asciiLowercase, asciiUppercase},
+			func() int64 { return 0 },
+			[]asciiType{asciiUppercase, asciiDigit, asciiSymbol, asciiLowercase},
 		},
 		{
 			[]asciiType{asciiLowercase, asciiUppercase, asciiDigit, asciiSymbol},
-			rand.NewSource(1),
-			[]asciiType{asciiLowercase, asciiSymbol, asciiUppercase, asciiDigit},
+			func() int64 { return 1 },
+			[]asciiType{asciiLowercase, asciiDigit, asciiSymbol, asciiUppercase},
 		},
 	}
 	for _, c := range cases {
-		shuffleASCIIOrder(&c.asciiOrder, c.randSource)
+		shuffleASCIIOrder(&c.asciiOrder, c.randInt)
 		if !reflect.DeepEqual(c.asciiOrder, c.shuffledASCIIOrder) {
-			t.Errorf("shuffleAsciiOrder(&c.asciiOrder, c.randSource) == %v want %v", c.asciiOrder, c.shuffledASCIIOrder)
+			t.Errorf("shuffleAsciiOrder(&c.asciiOrder, c.randInt) == %v want %v", c.asciiOrder, c.shuffledASCIIOrder)
 		}
 	}
 }
 
 func Test_SatisfyPassword(t *testing.T) {
 	cases := []struct {
-		passwordDigest      [32]byte
-		passwordLength      uint8
-		round               uint16
-		unallowedCharacters unallowedCharactersType
-		password            string
+		passwordDigest           [32]byte
+		passwordLength           uint8
+		round                    uint16
+		unallowedCharacters      unallowedCharactersType
+		programDerivationVersion uint16
+		password                 string
 	}{
 		{
 			[32]byte{173, 201, 139, 108, 102, 233, 47, 218, 121, 176, 142, 54, 143, 21, 28, 204, 115, 253, 79, 230, 151, 171, 237, 46, 77, 152, 189, 34, 89, 28, 149, 29},
 			0,
 			1,
 			unallowedCharactersType{},
+			1, // 1 == 2
 			``,
 		},
 		{
@@ -182,6 +183,7 @@ func Test_SatisfyPassword(t *testing.T) {
 			2,
 			1,
 			unallowedCharactersType{},
+			1, // 1 == 2
 			`Fq`,
 		},
 		{
@@ -189,6 +191,7 @@ func Test_SatisfyPassword(t *testing.T) {
 			4,
 			1,
 			unallowedCharactersType{},
+			1, // 1 == 2
 			`jA9;`,
 		},
 		{
@@ -196,6 +199,7 @@ func Test_SatisfyPassword(t *testing.T) {
 			10,
 			1,
 			unallowedCharactersType{},
+			1, // 1 == 2
 			`U1b5&O/Zyu`,
 		},
 		{
@@ -203,6 +207,7 @@ func Test_SatisfyPassword(t *testing.T) {
 			10,
 			1,
 			unallowedCharactersType{},
+			1, // 1 == 2
 			`Otf}Aw82T*`,
 		},
 		{
@@ -210,6 +215,7 @@ func Test_SatisfyPassword(t *testing.T) {
 			10,
 			2,
 			unallowedCharactersType{},
+			1, // 1 == 2
 			`L;ggD48X>t`,
 		},
 		{
@@ -217,6 +223,7 @@ func Test_SatisfyPassword(t *testing.T) {
 			50,
 			1,
 			unallowedCharactersType{},
+			1, // 1 == 2
 			`zX'l+6WYyx.e&8G8>647sKmn93AV^Jb]d_1Zz3K.-y7Z*j4Z,H`,
 		},
 		{
@@ -224,6 +231,7 @@ func Test_SatisfyPassword(t *testing.T) {
 			10,
 			1,
 			BuildUnallowedCharacters(false, false, true, true, ""),
+			1, // 1 == 2
 			`<636/\/)38`,
 		},
 		{
@@ -231,6 +239,7 @@ func Test_SatisfyPassword(t *testing.T) {
 			10,
 			1,
 			BuildUnallowedCharacters(true, false, false, false, ""),
+			1, // 1 == 2
 			`j3nlfCL08L`,
 		},
 		{
@@ -238,13 +247,22 @@ func Test_SatisfyPassword(t *testing.T) {
 			50,
 			1,
 			unallowedCharactersType{},
+			1, // 1 == 2
 			`IF>t8UyMCSRU3Mt0\4*<l=sf5l8Le{n2{'85RO0Iij=$04{d&i`,
+		},
+		{
+			[32]byte{156, 176, 130, 203, 252, 241, 158, 62, 20, 50, 82, 100, 43, 23, 148, 2, 180, 43, 42, 72, 204, 24, 21, 159, 110, 52, 244, 177, 101, 165, 79, 195},
+			50,
+			1,
+			unallowedCharactersType{},
+			3,
+			`Hw:1'l18=Jud9Z^9x8N34Lynn(S]eGzBD3X[0Ec"#u1]L-3e=Y`,
 		},
 	}
 	for _, c := range cases {
-		out := SatisfyPassword(&c.passwordDigest, c.passwordLength, c.round, c.unallowedCharacters)
+		out := SatisfyPassword(&c.passwordDigest, c.passwordLength, c.round, c.unallowedCharacters, c.programDerivationVersion)
 		if out != c.password {
-			t.Errorf("SatisfyPassword(%v, %d, %d, %v) == %s want %s", c.passwordDigest, c.passwordLength, c.round, c.unallowedCharacters, out, c.password)
+			t.Errorf("SatisfyPassword(%v, %d, %d, %v, %d) == %s want %s", c.passwordDigest, c.passwordLength, c.round, c.unallowedCharacters, c.programDerivationVersion, out, c.password)
 		}
 	}
 }
