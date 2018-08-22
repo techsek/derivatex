@@ -257,17 +257,16 @@ derivatex help
 
 ### Urgent
 
+- [ ] Show age in days instead of creation time
+- [ ] Store seed information in database
 - [ ] Rework code with future server in mind
   - [ ] Split secret digest into 2 256-bit halves
-  - [ ] Do SHA 256 of (website+user)
-- [ ] Rework code for language portability
-  - [ ] Understand rand.Seed or use something else in password generation
-- [ ] Show age in days instead of creation time
-- [ ] Interactive CLI command choice when no argument is provided
+  - [x] Do SHA 256 of (website+user)
 - [ ] Encrypt database locally with passphrase if set
 - [ ] Log file
+- [x] Rework code for language portability
+  - [x] Understand rand.Seed or use something else in password generation
 - [x] Replace PIN code with 2 random words passphrase with Argon2id
-- [ ] Rework CLI with [urface/cli](https://github.com/urfave/cli)
 
 ### Documentation
 
