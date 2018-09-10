@@ -206,16 +206,23 @@ var generateCmd = &cobra.Command{
 						for {
 							chosenUser := internal.ReadInput("User [" + existingUsers[0] + "]: ")
 							if chosenUser == "" {
-								chosenUser = existingUsers[0]
+								newIdentification = identifications[0]
+								break
 							}
+							selected := false
 							for _, identification := range identifications {
 								if chosenUser == identification.User {
 									newIdentification = identification
+									selected = true
 									break
 								}
 							}
+							if selected {
+								break
+							}
 							color.Yellow("User '" + chosenUser + "' is not valid. Please try again")
 						}
+						break
 					}
 					color.Yellow("Choice '" + newOrOld + "' is not valid. Please try again")
 				}
@@ -227,8 +234,10 @@ var generateCmd = &cobra.Command{
 		}
 
 		var password string
-		passwordDigest := internal.MakePasswordDigest(seed, website, user, newIdentification.PasswordDerivationVersion)
+		passwordDigest := internal.MakePasswordDigest(seed, newIdentification.Website, newIdentification.User, newIdentification.PasswordDerivationVersion)
 		password = internal.SatisfyPassword(passwordDigest, newIdentification.PasswordLength, newIdentification.Round, unallowedCharacters, newIdentification.PasswordDerivationVersion)
+		color.White("Using the following identification to generate the password:")
+		internal.DisplayIdentificationCLI(newIdentification)
 		if generateP.save {
 			// TODO transaction
 			if replaceIdentification {
@@ -239,9 +248,8 @@ var generateCmd = &cobra.Command{
 				}
 			}
 			if identificationIsNew {
-				color.HiGreen("Saving new identification and password generation settings in database:")
-				internal.DisplayIdentificationCLI(newIdentification)
 				internal.InsertIdentification(newIdentification)
+				color.HiGreen("New identification and password generation settings saved in database.")
 			}
 		}
 		if generateP.passwordOnly {
