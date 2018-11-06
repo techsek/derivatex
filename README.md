@@ -294,7 +294,7 @@ derivatex help
 
 ### CLI
 
-- [ ] Fix different drive paths on Windows platform
+- [x] Fix different drive paths on Windows platform
 - [ ] Flag to choose the CSV separator when dumping a table
 - [ ] Make search command work with multiple words separated by space
 - [ ] Generate seed words (i.e. 12 words for cardano)

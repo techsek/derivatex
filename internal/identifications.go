@@ -19,7 +19,12 @@ import (
 var database *sql.DB
 
 func InitiateDatabaseIfNeeded() (err error) {
-	database, err = sql.Open("sqlite3", "./"+constants.DatabaseFilename)
+	ex, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(ex)
+	database, err = sql.Open("sqlite3", dir+"/"+constants.DatabaseFilename)
 	if err != nil {
 		return err
 	}
@@ -200,10 +205,11 @@ func SearchIdentifications(query string, searchWebsites, searchUsers bool) (iden
 }
 
 func DumpTable(tableName string, outputfilename string) error {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	ex, err := os.Executable()
 	if err != nil {
 		return err
 	}
+	dir := filepath.Dir(ex)
 	rows, err := database.Query("SELECT * FROM " + tableName)
 	if err != nil {
 		return err

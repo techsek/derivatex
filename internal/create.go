@@ -29,10 +29,11 @@ func CreateSeed(masterPasswordSHA3 *[32]byte, birthdateSHA3 *[32]byte) (seed *[]
 }
 
 func WriteSeed(defaultUser string, protection string, seed *[]byte) error {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	ex, err := os.Executable()
 	if err != nil {
 		return err
 	}
+	dir := filepath.Dir(ex)
 	var content = new([]byte)
 	*content = append(*content, []byte("Default user: "+defaultUser+"\n")...)
 	*content = append(*content, []byte("Protection: "+protection+"\n")...)

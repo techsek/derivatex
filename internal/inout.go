@@ -38,10 +38,11 @@ func ReadSecret(prompt string) (secretPtr *[]byte, err error) {
 
 // We just use sha3 as the input space is already 512 bits and is impossible to crack
 func ReadSeed() (defaultUser string, protection string, seed *[]byte, err error) {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	ex, err := os.Executable()
 	if err != nil {
 		return "", "", nil, err
 	}
+	dir := filepath.Dir(ex)
 	var content = new([]byte)
 	defer ClearByteSlice(content)
 	*content, err = ioutil.ReadFile(dir + "/" + constants.SeedFilename)
