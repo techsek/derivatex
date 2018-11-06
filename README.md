@@ -157,25 +157,22 @@ The following list of situations goes from most likely to happen to most unlikel
 #### 1.2. Build from source
 
 1. Install [Golang](https://golang.org/dl/)
-1. Install [dep](https://golang.github.io/dep/docs/installation.html) for dependency management
-1. Clone the github repository in your `$GOPATH`
+1. Clone the github repository
 
     ```bash
-    git clone https://github.com/techsek/derivatex.git $GOPATH/src/github.com/techsek/derivatex
+    git clone https://github.com/techsek/derivatex.git
+    cd derivatex
     ```
 
 1. Build derivatex
 
     ```bash
-    cd $GOPATH/src/github.com/techsek/derivatex
-    dep ensure
     go build
     ```
 
 *For the security paranoids...*
 
 - Compile the code with different parameters, see [*params.go*](params.go)
-- Compile with Docker and run with Docker
 - Do not disclose what program you are using
 - Scan the QR code from an offline device i.e. a Raspberry Pi
 
@@ -259,8 +256,8 @@ derivatex help
 
 1. [ ] Show age in days instead of creation time
 1. [ ] Work on homomorphic encryption server
-  - [ ] Keccak boolean circuit
-  - [ ] Palisade
+    - [ ] Keccak boolean circuit
+    - [ ] Palisade
 1. [ ] Store seed information in database
 1. [ ] Encrypt database locally with passphrase if set
 1. [ ] E2EE Log file
