@@ -235,7 +235,7 @@ var generateCmd = &cobra.Command{
 
 		var password string
 		passwordDigest := internal.MakePasswordDigest(seed, newIdentification.Website, newIdentification.User, newIdentification.PasswordDerivationVersion)
-		password = internal.SatisfyPassword(passwordDigest, newIdentification.PasswordLength, newIdentification.Round, unallowedCharacters, newIdentification.PasswordDerivationVersion)
+		password = internal.SatisfyPassword(passwordDigest, newIdentification.PasswordLength, newIdentification.Round, newIdentification.unallowedCharacters, newIdentification.PasswordDerivationVersion)
 		color.White("Using the following identification to generate the password:")
 		internal.DisplayIdentificationCLI(newIdentification)
 		if generateP.save {
