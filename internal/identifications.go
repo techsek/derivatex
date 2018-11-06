@@ -5,14 +5,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/olekukonko/tablewriter"
-	"github.com/spf13/cast"
 	"github.com/techsek/derivatex/constants"
 )
 
@@ -50,7 +48,20 @@ type IdentificationType struct {
 }
 
 func IdentificationTypeLegendStrings() []string {
-	return []string{"Website", "User", "Password Length", "Round", "Unallowed characters", "Creation date", "Program version", "Note"}
+	return []string{"Website", "User", "Password Length", "Round", "Unallowed characters", "Age", "Program version", "Note"}
+}
+
+func durationString(t time.Time) (durationStr string) {
+	duration := time.Since(t)
+	if duration < time.Minute {
+		return strconv.FormatFloat(duration.Round(time.Second).Seconds(), 'f', -1, 64) + "s"
+	} else if duration < time.Hour {
+		return strconv.FormatFloat(duration.Round(time.Minute).Minutes(), 'f', -1, 64) + "m"
+	} else if duration < 24*time.Hour {
+		return strconv.FormatFloat(duration.Round(time.Hour).Hours(), 'f', -1, 64) + "h"
+	} else {
+		return strconv.FormatFloat(duration.Round(time.Hour*24).Hours()/24, 'f', -1, 64) + "d"
+	}
 }
 
 func (identification *IdentificationType) ToStrings() []string {
@@ -60,7 +71,7 @@ func (identification *IdentificationType) ToStrings() []string {
 		strconv.FormatUint(uint64(identification.PasswordLength), 10),
 		strconv.FormatUint(uint64(identification.Round), 10),
 		identification.UnallowedCharacters,
-		time.Unix(identification.CreationTime, 0).Format("02/01/2006"),
+		durationString(time.Unix(identification.CreationTime, 0)),
 		strconv.FormatUint(uint64(identification.PasswordDerivationVersion), 10),
 		identification.Note,
 	}
@@ -275,12 +286,7 @@ func DisplayIdentificationCLI(identification IdentificationType) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetColWidth(0)
 	table.SetHeader(IdentificationTypeLegendStrings())
-	value := reflect.ValueOf(identification)
-	var row []string
-	for i := 0; i < value.NumField(); i++ {
-		row = append(row, cast.ToString(value.Field(i).Interface()))
-	}
-	table.Append(row)
+	table.Append(identification.ToStrings())
 	table.Render()
 }
 
@@ -288,13 +294,8 @@ func DisplayIdentificationsCLI(identifications []IdentificationType) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetColWidth(0)
 	table.SetHeader(IdentificationTypeLegendStrings())
-	for _, identification := range identifications {
-		value := reflect.ValueOf(identification)
-		var row []string
-		for i := 0; i < value.NumField(); i++ {
-			row = append(row, cast.ToString(value.Field(i).Interface()))
-		}
-		table.Append(row)
+	for i := range identifications {
+		table.Append(identifications[i].ToStrings())
 	}
 	table.Render()
 }
@@ -310,8 +311,8 @@ func DisplaySingleColumnCLI(title string, users []string) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetColWidth(0)
 	table.SetHeader([]string{title})
-	for _, user := range users {
-		table.Append([]string{user})
+	for i := range users {
+		table.Append([]string{users[i]})
 	}
 	table.Render()
 }

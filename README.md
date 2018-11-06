@@ -254,7 +254,6 @@ derivatex help
 
 ### Urgent
 
-1. [ ] Show age in days instead of creation time
 1. [ ] Work on homomorphic encryption server
     - [ ] Keccak boolean circuit
     - [ ] Palisade
@@ -265,6 +264,7 @@ derivatex help
 - [x] Rework code for language portability
   - [x] Understand rand.Seed or use something else in password generation
 - [x] Replace PIN code with 2 random words passphrase with Argon2id
+- [x] Show age in days instead of creation time
 
 ### Documentation
 
